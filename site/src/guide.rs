@@ -1,10 +1,13 @@
 //! Le contenu du guide. Chaque étape est une suite de blocs : texte, listes,
 //! commandes, fichiers, mises en garde. `guide_page.rs` les met en page.
+//!
+//! Les fichiers du dépôt montrés dans le guide sont inclus par `include_str!` :
+//! le guide ne peut pas s'écarter du code.
 
 /// Date de la dernière vérification des commandes.
 pub const GUIDE_UPDATED: &str = "26 novembre 2026";
 
-pub const INTRO: &str = "Ce guide décrit, dans l'ordre, tout le chemin entre un Nothing Phone (4b) d'origine et un système AOSP compilé par vous, dont les services propres à l'appareil sont écrits en Rust. Chaque étape dit d'où viennent ses commandes et si elles ont déjà été essayées sur ce téléphone.";
+pub const INTRO: &str = "Ce guide décrit, dans l'ordre, tout le chemin entre un Nothing Phone (4b) d'origine et un système AOSP compilé par vous, avec des services écrits en Rust. Il avance en deux temps : d'abord un système AOSP qui garde le noyau et les pilotes d'origine (étapes 05 à 08), puis le remplacement de ces pilotes (étapes 09 à 11). Chaque étape dit d'où viennent ses commandes et si elles ont déjà été essayées.";
 
 /// Ce que l'on sait d'une étape.
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -13,15 +16,25 @@ pub enum Verified {
     Yes,
     /// La méthode est connue, mais personne ne l'a encore publiée pour le 4b.
     Partly,
+    /// Le code est dans le dépôt, mais n'a encore jamais été compilé dans AOSP.
+    Untested,
     /// Le projet doit encore écrire cette partie : le code est un point de départ.
     No,
 }
 
 impl Verified {
+    pub const ALL: [Verified; 4] = [
+        Verified::Yes,
+        Verified::Partly,
+        Verified::Untested,
+        Verified::No,
+    ];
+
     pub fn label(self) -> &'static str {
         match self {
             Verified::Yes => "Sources officielles",
             Verified::Partly => "À confirmer sur le 4b",
+            Verified::Untested => "Écrit, pas encore compilé",
             Verified::No => "À écrire par le projet",
         }
     }
@@ -34,6 +47,9 @@ impl Verified {
             Verified::Partly => {
                 "La méthode marche sur des appareils proches ; elle n'a pas encore été essayée sur le Phone (4b)."
             }
+            Verified::Untested => {
+                "Le code est dans le dépôt et suit les exemples d'AOSP, mais n'a encore jamais été compilé ni essayé."
+            }
             Verified::No => {
                 "Le projet doit encore écrire cette partie ; le code montré est un point de départ."
             }
@@ -44,6 +60,7 @@ impl Verified {
         match self {
             Verified::Yes => "badge yes",
             Verified::Partly => "badge partly",
+            Verified::Untested => "badge untested",
             Verified::No => "badge no",
         }
     }
@@ -61,7 +78,7 @@ pub enum Block {
         title: &'static str,
         code: &'static str,
     },
-    /// Le contenu d'un fichier à créer.
+    /// Le contenu d'un fichier.
     File {
         path: &'static str,
         code: &'static str,
@@ -103,8 +120,8 @@ pub const STEPS: &[Step] = &[
             List(&[
                 "Un Nothing Phone (4b), modèle A009P, nom de code SuperContra.",
                 "Un câble USB-C qui transporte les données, pas seulement la charge.",
-                "Un ordinateur Linux 64 bits x86, avec au moins 64 Go de mémoire et 400 Go d'espace libre : 250 Go pour les sources d'AOSP, 150 Go pour la compilation.",
-                "Une connexion rapide : les sources d'AOSP pèsent des dizaines de gigaoctets.",
+                "Un ordinateur avec un port USB, pour parler au téléphone : n'importe quel ordinateur suffit jusqu'à l'étape 05.",
+                "Pour compiler AOSP (à partir de l'étape 06) : un ordinateur Linux 64 bits x86, avec au moins 64 Go de mémoire et 400 Go d'espace libre (250 Go pour les sources, 150 Go pour la compilation). Un serveur loué à l'heure convient.",
             ]),
             Warning(
                 "Déverrouiller le bootloader efface toutes les données du téléphone et peut annuler la garantie. Sur les puces Qualcomm, le niveau de protection Widevine passe de L1 à L3 (vidéo en définition réduite dans certaines applications), et les applications qui vérifient l'intégrité de l'appareil (banques, paiement) peuvent refuser de fonctionner.",
@@ -121,24 +138,13 @@ pub const STEPS: &[Step] = &[
     Step {
         id: "ordinateur",
         title: "Préparer l'ordinateur",
-        goal: "Installer les outils Android (adb, fastboot, repo), les paquets de compilation et Rust.",
+        goal: "Installer adb et fastboot, Rust et l'outil cf du projet ; et, pour compiler, les paquets d'AOSP.",
         time: "20 minutes",
         verified: Verified::Yes,
         blocks: &[
             Text(
-                "Les commandes ci-dessous sont pour Ubuntu (18.04 ou plus récent), la distribution que la documentation d'AOSP prend pour exemple.",
+                "Les commandes sont pour Ubuntu (18.04 ou plus récent), la distribution que la documentation d'AOSP prend pour exemple.",
             ),
-            Code {
-                title: "Paquets de compilation d'AOSP et repo",
-                code: r#"
-sudo apt-get update
-sudo apt-get install git-core gnupg flex bison build-essential zip curl \
-  zlib1g-dev libc6-dev-i386 x11proto-core-dev libx11-dev lib32z1-dev \
-  libgl1-mesa-dev libxml2-utils xsltproc unzip fontconfig
-sudo apt-get install repo
-repo version        # 2.4 ou plus récent
-"#,
-            },
             Code {
                 title: "adb et fastboot (platform-tools de Google)",
                 code: r#"
@@ -150,12 +156,28 @@ adb --version && fastboot --version
 "#,
             },
             Code {
-                title: "Rust, pour les outils du projet",
+                title: "Rust, puis cf, l'outil du projet",
                 code: r#"
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
-rustc --version
+git clone https://github.com/maxlestage/customFirmware.git ~/customFirmware
+cargo install --path ~/customFirmware/tools
+cf doctor ~          # vérifie le système, la mémoire, le disque et les outils
 "#,
             },
+            Code {
+                title: "Pour compiler AOSP : ses paquets et repo",
+                code: r#"
+sudo apt-get update
+sudo apt-get install git-core gnupg flex bison build-essential zip curl \
+  zlib1g-dev libc6-dev-i386 x11proto-core-dev libx11-dev lib32z1-dev \
+  libgl1-mesa-dev libxml2-utils xsltproc unzip fontconfig
+sudo apt-get install repo
+repo version        # 2.4 ou plus récent
+"#,
+            },
+            Check(
+                "cf doctor affiche une coche devant chaque ligne. Sans les 64 Go de mémoire et les 400 Go de disque, vous pouvez quand même suivre le guide jusqu'à l'étape 05.",
+            ),
             Tip(
                 "Si adb ne voit pas le téléphone sans sudo, installez les règles udev d'Android : sudo apt-get install android-sdk-platform-tools-common, puis débranchez et rebranchez le câble.",
             ),
@@ -178,25 +200,22 @@ rustc --version
                 "Branchez le téléphone et acceptez la demande d'autorisation qui s'affiche.",
             ]),
             Code {
-                title: "Ce que le device tree devra reproduire",
+                title: "Relever les propriétés, puis les lire avec cf",
                 code: r#"
 adb devices                                   # le téléphone doit être listé « device »
 mkdir -p ~/supercontra && cd ~/supercontra
-adb shell getprop > getprop.txt               # toutes les propriétés, pour plus tard
-adb shell getprop ro.build.display.id         # la version de Nothing OS
-adb shell getprop ro.build.fingerprint
-adb shell getprop ro.board.platform           # le nom de plateforme Qualcomm
-adb shell getprop ro.product.first_api_level
-adb shell getprop ro.boot.dynamic_partitions  # partitions dynamiques (super)
-adb shell getprop ro.virtual_ab.enabled       # mises à jour A/B virtuelles
-adb shell ls /vendor/etc | grep -i fstab      # la table des partitions
+adb shell getprop > getprop.txt
+cf props getprop.txt
 "#,
             },
+            Text(
+                "cf props affiche ce dont le portage a besoin : la version exacte du système, la plateforme Qualcomm, le niveau d'API de lancement, la compatibilité Treble, les partitions dynamiques et l'état du démarrage vérifié.",
+            ),
             Check(
-                "getprop.txt contient plusieurs centaines de lignes, et ro.build.display.id donne une version de la forme SuperContra-B4.1-….",
+                "La ligne « Version du système » donne une version de la forme SuperContra-B4.1-…, et la ligne « Treble » vaut true.",
             ),
             Tip(
-                "Copiez le fichier fstab trouvé avec adb pull /vendor/etc/<nom du fichier> . : il décrit les partitions que le système monte au démarrage.",
+                "Notez aussi la table des partitions : adb shell ls /vendor/etc | grep -i fstab, puis adb pull /vendor/etc/<nom du fichier> .",
             ),
             Source {
                 title: "Nothing Archive : activer les options pour les développeurs",
@@ -279,14 +298,211 @@ fastboot flashing unlock
                 "Le téléphone s'efface et redémarre. Refaites la configuration initiale, réactivez les options pour les développeurs et vérifiez que « Déverrouillage OEM » est toujours activé.",
             ]),
             Check(
-                "Au démarrage, le téléphone affiche un avertissement « Orange State » : c'est normal, il signale un bootloader déverrouillé.",
+                "Au démarrage, le téléphone affiche un avertissement « Orange State » : c'est normal, il signale un bootloader déverrouillé. cf props affiche alors « orange » sur la ligne « Démarrage vérifié ».",
             ),
             Warning(
-                "Pour revenir en arrière, il faudra d'abord réinstaller le système d'origine complet (étape 11). Reverrouiller (fastboot flashing lock) avec une partition modifiée peut rendre le téléphone inutilisable.",
+                "Pour revenir en arrière, il faudra d'abord réinstaller le système d'origine complet (étape 12). Reverrouiller (fastboot flashing lock) avec une partition modifiée peut rendre le téléphone inutilisable.",
             ),
             Source {
                 title: "Nothing Archive : déverrouiller le bootloader",
                 url: "https://nothingarchive.tech/docs/guides#unlocking-bootloader",
+            },
+        ],
+    },
+    Step {
+        id: "gsi",
+        title: "Démarrer une image AOSP générique",
+        goal: "Voir AOSP tourner sur le téléphone sans rien compiler, avec le noyau et les pilotes d'origine.",
+        time: "30 minutes",
+        verified: Verified::Partly,
+        blocks: &[
+            Text(
+                "Depuis Android 9, le système (partition system) et les pilotes (partition vendor) sont séparés : c'est Treble. Google publie des images système génériques d'AOSP, les GSI, qui démarrent sur tout téléphone compatible. C'est le moyen le plus court de savoir ce qui marche sur le Phone (4b) : aucune compilation, aucun ordinateur puissant.",
+            ),
+            Code {
+                title: "Vérifier que le téléphone est compatible",
+                code: r#"
+adb shell getprop ro.treble.enabled      # true
+adb shell getprop ro.product.cpu.abi     # arm64-v8a : il faut une image ARM64
+"#,
+            },
+            Text(
+                "Téléchargez sur le site d'Android pour les développeurs l'image ARM64 d'AOSP (sans les services Google), pour Android 16 ou plus récent. L'archive contient system.img et vbmeta.img.",
+            ),
+            Code {
+                title: "Installer l'image (procédure officielle, donnée pour les Pixel)",
+                code: r#"
+adb reboot bootloader
+fastboot reboot fastboot                  # le mode fastboot « utilisateur »
+fastboot erase system
+fastboot flash system system.img
+fastboot -w                               # efface les données
+fastboot reboot-bootloader
+fastboot --disable-verification flash vbmeta vbmeta.img
+fastboot reboot
+"#,
+            },
+            Check(
+                "Le téléphone démarre sur AOSP. Notez ce qui fonctionne : écran, tactile, Wi-Fi, appels, caméra, son. Cette liste dit ce que l'étape 2 du projet devra réparer.",
+            ),
+            Tip(
+                "Si fastboot répond « Not enough space to resize partition », la documentation propose de supprimer la partition product : fastboot delete-logical-partition product_a. Elle sera recréée en réinstallant le système d'origine (étape 12).",
+            ),
+            Warning(
+                "La documentation officielle précise qu'il n'existe pas de procédure valable pour tous les téléphones. Si le téléphone ne démarre pas, réinstallez le système d'origine (étape 12).",
+            ),
+            Source {
+                title: "Android : images système génériques (téléchargement et compatibilité)",
+                url: "https://developer.android.com/topic/generic-system-image",
+            },
+            Source {
+                title: "AOSP : installer une GSI",
+                url: "https://source.android.com/docs/core/tests/vts/gsi",
+            },
+        ],
+    },
+    Step {
+        id: "aosp",
+        title: "Télécharger AOSP et le projet",
+        goal: "Récupérer les sources d'Android, et y placer customFirmware.",
+        time: "1 à 3 heures",
+        verified: Verified::Yes,
+        blocks: &[
+            Code {
+                title: "Initialiser AOSP",
+                code: r#"
+mkdir ~/aosp && cd ~/aosp
+repo init --partial-clone --no-use-superproject \
+  -b android-latest-release \
+  -u https://android.googlesource.com/platform/manifest
+"#,
+            },
+            Text(
+                "Un manifeste local ajoute le dépôt du projet à l'arbre d'AOSP, dans vendor/customfirmware : c'est là qu'AOSP cherche les produits et les modules supplémentaires.",
+            ),
+            File {
+                path: ".repo/local_manifests/customfirmware.xml",
+                code: include_str!("../../manifests/customfirmware.xml"),
+            },
+            Code {
+                title: "Ajouter le manifeste et tout télécharger",
+                code: r#"
+mkdir -p .repo/local_manifests
+cp ~/customFirmware/manifests/customfirmware.xml .repo/local_manifests/
+repo sync -c -j8
+"#,
+            },
+            Text(
+                "android-latest-release désigne toujours la dernière version publiée d'Android (Android 17 en novembre 2026).",
+            ),
+            Check(
+                "repo sync se termine sans erreur, et ~/aosp/vendor/customfirmware contient products/ et services/.",
+            ),
+            Source {
+                title: "AOSP : télécharger les sources",
+                url: "https://source.android.com/docs/setup/download",
+            },
+            Source {
+                title: "repo : manifestes locaux",
+                url: "https://gerrit.googlesource.com/git-repo/+/HEAD/docs/manifest-format.md",
+            },
+        ],
+    },
+    Step {
+        id: "rust",
+        title: "Le premier service en Rust",
+        goal: "Comprendre le service Binder du dépôt : la brique de base de tous les services du projet.",
+        time: "30 minutes de lecture",
+        verified: Verified::Untested,
+        blocks: &[
+            Text(
+                "Sous Android, les programmes se parlent par Binder, et chaque service décrit ce qu'il offre dans une interface AIDL. AOSP sait générer le code Rust d'une interface AIDL : on écrit l'interface, puis le service en Rust. Les trois fichiers ci-dessous sont dans le dépôt, dans services/hello.",
+            ),
+            File {
+                path: "services/hello/aidl/customfirmware/hello/IHello.aidl",
+                code: include_str!("../../services/hello/aidl/customfirmware/hello/IHello.aidl"),
+            },
+            File {
+                path: "services/hello/Android.bp",
+                code: include_str!("../../services/hello/Android.bp"),
+            },
+            File {
+                path: "services/hello/src/main.rs",
+                code: include_str!("../../services/hello/src/main.rs"),
+            },
+            Text(
+                "Ce service ne se compile pas avec Cargo : c'est AOSP qui le compile, avec sa bibliothèque Binder (libbinder_rs) et le code généré depuis l'interface AIDL.",
+            ),
+            Source {
+                title: "AOSP : exemple de service AIDL en Rust",
+                url: "https://source.android.com/docs/setup/build/rust/building-rust-modules/android-rust-patterns",
+            },
+            Source {
+                title: "AOSP : les backends AIDL",
+                url: "https://source.android.com/docs/core/architecture/aidl/aidl-backends",
+            },
+        ],
+    },
+    Step {
+        id: "compiler",
+        title: "Compiler et installer notre système",
+        goal: "Construire customfirmware_arm64, une image AOSP générique avec le service Rust, et l'installer.",
+        time: "1 à 6 heures de compilation",
+        verified: Verified::Untested,
+        blocks: &[
+            Text(
+                "Le produit customfirmware_arm64 reprend l'image générique d'AOSP et lui ajoute les services du projet. Il s'installe comme la GSI de l'étape 05, en gardant le noyau et les pilotes d'origine.",
+            ),
+            File {
+                path: "products/customfirmware_arm64.mk",
+                code: include_str!("../../products/customfirmware_arm64.mk"),
+            },
+            Code {
+                title: "Compiler",
+                code: r#"
+cd ~/aosp
+source build/envsetup.sh
+lunch customfirmware_arm64-aosp_current-userdebug
+m
+"#,
+            },
+            Text(
+                "La documentation d'AOSP compte environ 40 minutes sur une machine de 72 cœurs, et 6 heures sur 6 cœurs. Le résultat est dans out/target/product/generic_arm64.",
+            ),
+            Code {
+                title: "Installer (la vérification est déjà désactivée depuis l'étape 05)",
+                code: r#"
+adb reboot bootloader
+fastboot reboot fastboot
+fastboot erase system
+fastboot flash system out/target/product/generic_arm64/system.img
+fastboot -w
+fastboot reboot
+"#,
+            },
+            Code {
+                title: "Essayer le service Rust",
+                code: r#"
+adb root
+adb shell setenforce 0                 # SELinux permissif, pour ce premier essai seulement
+adb shell /system_ext/bin/customfirmware-hello &
+adb shell service check customfirmware.hello
+adb shell service call customfirmware.hello 1 s16 Max
+"#,
+            },
+            Check(
+                "service check répond « found », et service call renvoie un texte qui contient « Bonjour Max, depuis Rust ».",
+            ),
+            Warning(
+                "Le service n'a pas encore de politique SELinux : init ne peut pas le lancer au démarrage, d'où le lancement à la main en mode permissif. Écrire cette politique est la suite du travail.",
+            ),
+            Source {
+                title: "AOSP : compiler (lunch et cibles)",
+                url: "https://source.android.com/docs/setup/build/building",
+            },
+            Source {
+                title: "AOSP : installer une GSI",
+                url: "https://source.android.com/docs/core/tests/vts/gsi",
             },
         ],
     },
@@ -298,81 +514,57 @@ fastboot flashing unlock
         verified: Verified::Partly,
         blocks: &[
             Text(
-                "Le modem, le GPU, la caméra ou le Wi-Fi ont besoin de pilotes fermés, rangés dans les partitions vendor, odm et vendor_dlkm. AOSP ne les a pas : on les reprend tels quels depuis les images de l'étape 03.",
+                "Ici commence l'étape 2 du projet : construire aussi la partition vendor, pour pouvoir y mettre nos propres couches matérielles en Rust. Le modem, le GPU, la caméra ou le Wi-Fi ont besoin de pilotes fermés ; on les reprend tels quels depuis les images de l'étape 03.",
             ),
             Code {
-                title: "Ouvrir la partition vendor en lecture seule",
+                title: "Ouvrir les partitions d'origine en lecture seule",
                 code: r#"
 cd ~/supercontra/stock
 file vendor.img                         # ext4 ou EROFS
-sudo mkdir -p /mnt/vendor
-sudo mount -o loop,ro vendor.img /mnt/vendor
-ls /mnt/vendor/lib64 /mnt/vendor/firmware | head
+sudo mkdir -p /mnt/stock/vendor /mnt/stock/odm
+sudo mount -o loop,ro vendor.img /mnt/stock/vendor
+sudo mount -o loop,ro odm.img /mnt/stock/odm
+ls /mnt/stock/vendor/lib64 | head
 "#,
             },
             Text(
-                "La liste des fichiers à reprendre s'écrit dans proprietary-files.txt, à la racine du device tree, un chemin par ligne. Un outil du projet, écrit en Rust, lira cette liste et copiera les fichiers dans vendor/nothing/SuperContra.",
+                "La liste des fichiers à reprendre s'écrit dans proprietary-files.txt, un chemin par ligne. cf blobs lit cette liste, copie les fichiers hors du dépôt et écrit le fragment Make qui les installe. Les fichiers introuvables sont signalés.",
             ),
             File {
-                path: "device/nothing/SuperContra/proprietary-files.txt (extrait)",
+                path: "device/SuperContra/proprietary-files.txt",
+                code: include_str!("../../device/SuperContra/proprietary-files.txt"),
+            },
+            Code {
+                title: "Copier les fichiers de la liste",
                 code: r#"
-# Chaque ligne est un chemin dans les partitions d'origine.
-vendor/lib64/<bibliothèque>.so
-vendor/firmware/<micrologiciel>
-vendor/etc/init/<service>.rc
+cd ~/aosp/vendor/customfirmware
+cf blobs --list device/SuperContra/proprietary-files.txt \
+         --from /mnt/stock \
+         --out ~/aosp/vendor/nothing/SuperContra
+sudo umount /mnt/stock/vendor /mnt/stock/odm
 "#,
             },
-            Tip(
-                "Les vrais noms de fichiers se lisent dans /mnt/vendor. Les ports LineageOS d'appareils Qualcomm proches, comme celui du Phone (4a), montrent à quoi ressemble une liste complète.",
+            Check(
+                "cf blobs affiche « Introuvables : 0 », et ~/aosp/vendor/nothing/SuperContra contient proprietary/ et blobs.mk.",
+            ),
+            Warning(
+                "Ces fichiers appartiennent à Qualcomm et à Nothing : ils restent sur votre ordinateur et ne doivent pas être publiés. Le dépôt ne les suit pas.",
             ),
             Source {
                 title: "Un port voisin : LineageOS pour le Phone (4a), et ses fichiers propriétaires",
                 url: "https://github.com/justjoshin78/frogger-lineage",
-            },
-            Code {
-                title: "Démonter",
-                code: "sudo umount /mnt/vendor",
-            },
-        ],
-    },
-    Step {
-        id: "aosp",
-        title: "Télécharger AOSP",
-        goal: "Récupérer les sources d'Android sur l'ordinateur.",
-        time: "1 à 3 heures",
-        verified: Verified::Yes,
-        blocks: &[
-            Code {
-                title: "Initialiser et télécharger",
-                code: r#"
-mkdir ~/aosp && cd ~/aosp
-repo init --partial-clone --no-use-superproject \
-  -b android-latest-release \
-  -u https://android.googlesource.com/platform/manifest
-repo sync -c -j8
-"#,
-            },
-            Text(
-                "android-latest-release désigne toujours la dernière version publiée d'Android (Android 17 en novembre 2026). Le système d'origine du 4b est sous Android 16 : la séparation entre système et vendor d'Android (Treble) permet en principe de faire tourner un système plus récent sur les pilotes d'origine.",
-            ),
-            Check(
-                "La commande repo sync se termine sans erreur et ~/aosp contient build/, frameworks/, system/…",
-            ),
-            Source {
-                title: "AOSP : télécharger les sources",
-                url: "https://source.android.com/docs/setup/download",
             },
         ],
     },
     Step {
         id: "noyau",
         title: "Le noyau",
-        goal: "Démarrer d'abord avec le noyau d'origine, puis le recompiler depuis les sources de Nothing.",
+        goal: "Garder le noyau d'origine pour commencer, puis le recompiler depuis les sources de Nothing.",
         time: "1 heure pour le noyau d'origine",
         verified: Verified::No,
         blocks: &[
             Text(
-                "Nothing publie les sources du noyau du Phone (4b) (Linux 6.1), mais sans instructions de compilation. Pour le premier démarrage, le plus sûr est de réutiliser le noyau de Nothing, extrait de boot.img : on sait qu'il fonctionne avec les pilotes d'origine.",
+                "Nothing publie les sources du noyau du Phone (4b) (Linux 6.1), mais sans instructions de compilation. Le plus sûr est de réutiliser d'abord le noyau de Nothing, extrait de boot.img : on sait qu'il fonctionne avec les pilotes d'origine.",
             ),
             Code {
                 title: "Extraire le noyau d'origine (outil d'AOSP)",
@@ -407,214 +599,35 @@ git clone --depth 1 -b sm6650/b/SuperContra \
     },
     Step {
         id: "device-tree",
-        title: "Écrire le device tree",
+        title: "Le device tree",
         goal: "Décrire le téléphone à AOSP : son processeur, ses partitions, ses fichiers propriétaires.",
         time: "Plusieurs jours",
         verified: Verified::No,
         blocks: &[
             Text(
-                "Le device tree est un dossier de fichiers Make qui dit à AOSP comment construire un système pour cet appareil. Voici le squelette ; chaque valeur marquée « à relever » vient de l'étape 02.",
-            ),
-            File {
-                path: "device/nothing/SuperContra/AndroidProducts.mk",
-                code: r#"
-PRODUCT_MAKEFILES := $(LOCAL_DIR)/aosp_SuperContra.mk
-COMMON_LUNCH_CHOICES := aosp_SuperContra-aosp_current-userdebug
-"#,
-            },
-            File {
-                path: "device/nothing/SuperContra/aosp_SuperContra.mk",
-                code: r#"
-$(call inherit-product, $(SRC_TARGET_DIR)/product/core_64_bit_only.mk)
-$(call inherit-product, $(SRC_TARGET_DIR)/product/aosp_base_telephony.mk)
-$(call inherit-product, device/nothing/SuperContra/device.mk)
-
-PRODUCT_NAME := aosp_SuperContra
-PRODUCT_DEVICE := SuperContra
-PRODUCT_BRAND := Nothing
-PRODUCT_MANUFACTURER := Nothing
-PRODUCT_MODEL := A009P
-"#,
-            },
-            File {
-                path: "device/nothing/SuperContra/BoardConfig.mk",
-                code: r#"
-TARGET_ARCH := arm64
-TARGET_ARCH_VARIANT := armv8-2a
-TARGET_CPU_ABI := arm64-v8a
-TARGET_CPU_VARIANT := generic
-
-TARGET_BOOTLOADER_BOARD_NAME := SuperContra
-TARGET_BOARD_PLATFORM :=            # à relever : ro.board.platform
-
-# Partitions dynamiques : tailles à relever dans les images d'origine.
-BOARD_SUPER_PARTITION_SIZE :=
-BOARD_SUPER_PARTITION_GROUPS := nothing_dynamic_partitions
-BOARD_NOTHING_DYNAMIC_PARTITIONS_PARTITION_LIST := system system_ext product vendor odm
-"#,
-            },
-            File {
-                path: "device/nothing/SuperContra/device.mk",
-                code: r#"
-# Le noyau d'origine, extrait à l'étape 07.
-LOCAL_KERNEL := device/nothing/SuperContra-kernel/kernel
-PRODUCT_COPY_FILES += $(LOCAL_KERNEL):kernel
-
-# Le premier service Rust du projet (étape 09).
-PRODUCT_PACKAGES += customfirmware-hello
-"#,
-            },
-            Check(
-                "Après source build/envsetup.sh, la commande lunch sans argument liste aosp_SuperContra-aosp_current-userdebug.",
-            ),
-            Source {
-                title: "AOSP : compiler (lunch et cibles)",
-                url: "https://source.android.com/docs/setup/build/building",
-            },
-        ],
-    },
-    Step {
-        id: "rust",
-        title: "Écrire le premier service en Rust",
-        goal: "Ajouter au système un service Binder écrit en Rust, la brique de base de tous les HAL du projet.",
-        time: "2 heures",
-        verified: Verified::Partly,
-        blocks: &[
-            Text(
-                "Un HAL Android est un service qui parle le langage Binder, décrit par une interface AIDL. AOSP sait générer le code Rust d'une interface AIDL : on écrit l'interface, puis le service en Rust. Le code suit l'exemple officiel d'AOSP.",
-            ),
-            File {
-                path: "vendor/customfirmware/hello/aidl/vendor/customfirmware/hello/IHello.aidl",
-                code: r#"
-package vendor.customfirmware.hello;
-
-interface IHello {
-    String greet(String name);
-}
-"#,
-            },
-            File {
-                path: "vendor/customfirmware/hello/Android.bp",
-                code: r#"
-aidl_interface {
-    name: "vendor.customfirmware.hello",
-    srcs: ["aidl/vendor/customfirmware/hello/*.aidl"],
-    local_include_dir: "aidl",
-    unstable: true, // tant que l'interface change
-    backend: {
-        rust: {
-            enabled: true, // le Rust n'est pas activé par défaut
-        },
-    },
-}
-
-rust_binary {
-    name: "customfirmware-hello",
-    srcs: ["src/main.rs"],
-    rustlibs: [
-        "vendor.customfirmware.hello-rust",
-        "libbinder_rs",
-    ],
-    init_rc: ["customfirmware-hello.rc"],
-}
-"#,
-            },
-            File {
-                path: "vendor/customfirmware/hello/src/main.rs",
-                code: r#"
-use binder::{BinderFeatures, Interface, Result as BinderResult};
-use vendor_customfirmware_hello::aidl::vendor::customfirmware::hello::IHello::{
-    BnHello, IHello,
-};
-
-struct Hello;
-
-impl Interface for Hello {}
-
-impl IHello for Hello {
-    fn greet(&self, name: &str) -> BinderResult<String> {
-        Ok(format!("Bonjour {name}, depuis Rust"))
-    }
-}
-
-fn main() {
-    let service = BnHello::new_binder(Hello, BinderFeatures::default());
-    binder::add_service("customfirmware.hello", service.as_binder())
-        .expect("impossible d'enregistrer le service");
-    binder::ProcessState::join_thread_pool();
-}
-"#,
-            },
-            File {
-                path: "vendor/customfirmware/hello/customfirmware-hello.rc",
-                code: r#"
-service customfirmware-hello /system/bin/customfirmware-hello
-    class main
-    user system
-    group system
-"#,
-            },
-            Code {
-                title: "Compiler le service seul, puis l'essayer",
-                code: r#"
-cd ~/aosp && source build/envsetup.sh
-lunch aosp_SuperContra-aosp_current-userdebug
-m customfirmware-hello
-# une fois le système installé (étape 10) :
-adb root
-adb shell setenforce 0                 # SELinux permissif, pour ce premier essai seulement
-adb shell service list | grep customfirmware
-"#,
-            },
-            Warning(
-                "SELinux bloque par défaut un service inconnu. Le mode permissif ne sert qu'au premier essai : le vrai HAL aura sa politique SELinux, une interface stable et sa déclaration dans le manifeste VINTF.",
-            ),
-            Source {
-                title: "AOSP : exemple de service AIDL en Rust",
-                url: "https://source.android.com/docs/setup/build/rust/building-rust-modules/android-rust-patterns",
-            },
-            Source {
-                title: "AOSP : les backends AIDL",
-                url: "https://source.android.com/docs/core/architecture/aidl/aidl-backends",
-            },
-        ],
-    },
-    Step {
-        id: "installer",
-        title: "Compiler et installer",
-        goal: "Construire le système complet et l'installer sur le téléphone.",
-        time: "1 à 6 heures de compilation",
-        verified: Verified::Partly,
-        blocks: &[
-            Code {
-                title: "Compiler",
-                code: r#"
-cd ~/aosp
-source build/envsetup.sh
-lunch aosp_SuperContra-aosp_current-userdebug
-m
-"#,
-            },
-            Text(
-                "La documentation d'AOSP compte environ 40 minutes sur une machine de 72 cœurs, et 6 heures sur 6 cœurs. Le résultat est dans out/target/product/SuperContra.",
+                "Le device tree est un dossier de fichiers Make qui dit à AOSP comment construire un système complet pour cet appareil. Le dépôt en contient le squelette, dans device/SuperContra ; il ne compile pas encore.",
             ),
             Code {
-                title: "Installer",
+                title: "Y verser les faits du téléphone",
                 code: r#"
-adb reboot bootloader
-fastboot devices
-fastboot flashall -w     # -w efface les données : nécessaire au premier essai
+cd ~/aosp/vendor/customfirmware
+cf props ~/supercontra/getprop.txt --mk device/SuperContra/facts.mk
+cat device/SuperContra/facts.mk
 "#,
             },
-            Check(
-                "Le téléphone redémarre sur l'animation d'AOSP. Le premier démarrage peut prendre plusieurs minutes.",
-            ),
-            Tip(
-                "Si le téléphone revient au bootloader ou boucle au démarrage, ne paniquez pas : passez à l'étape 11 pour réinstaller le système d'origine, puis cherchez la cause dans le journal (adb logcat, s'il s'est lancé assez loin).",
-            ),
+            File {
+                path: "device/SuperContra/BoardConfig.mk",
+                code: include_str!("../../device/SuperContra/BoardConfig.mk"),
+            },
+            List(&[
+                "La table des partitions : taille de la partition super et de ses groupes, relevées dans les images d'origine.",
+                "Le noyau et l'image de démarrage (étape 10).",
+                "La politique SELinux et le manifeste VINTF, qui déclare les couches matérielles.",
+                "La liste des fichiers propriétaires (étape 09).",
+            ]),
             Source {
-                title: "AOSP : installer une version compilée",
-                url: "https://source.android.com/docs/setup/test/running",
+                title: "AOSP : ajouter un nouvel appareil",
+                url: "https://source.android.com/docs/setup/create/new-device",
             },
         ],
     },
@@ -679,13 +692,28 @@ mod tests {
     }
 
     #[test]
-    fn every_step_cites_a_source_or_is_project_work() {
+    fn every_step_cites_a_source() {
         for step in STEPS {
             let cited = step
                 .blocks
                 .iter()
                 .any(|b| matches!(b, Block::Source { .. }));
-            assert!(cited || step.verified == Verified::No, "{}", step.id);
+            assert!(cited, "{}", step.id);
         }
+    }
+
+    /// Les renvois « étape NN » du texte doivent suivre l'ordre des étapes.
+    #[test]
+    fn step_numbers_quoted_in_the_text_match() {
+        let number = |id: &str| STEPS.iter().position(|s| s.id == id).unwrap();
+        assert_eq!(number("informations"), 2);
+        assert_eq!(number("sauvegarde"), 3);
+        assert_eq!(number("gsi"), 5);
+        assert_eq!(number("aosp"), 6);
+        assert_eq!(number("compiler"), 8);
+        assert_eq!(number("extraire"), 9);
+        assert_eq!(number("noyau"), 10);
+        assert_eq!(number("device-tree"), 11);
+        assert_eq!(number("retour"), 12);
     }
 }

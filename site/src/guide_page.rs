@@ -36,12 +36,14 @@ fn guide_intro() -> Element {
             ),
         )
         .child(p().class("lead").style("--i:2").text(INTRO))
-        .child(ul().class("legend").style("--i:3").children(
-            [Verified::Yes, Verified::Partly, Verified::No].map(|v| {
-                li().child(span().class(v.class()).text(v.label()))
-                    .child(span().text(v.meaning()))
-            }),
-        ))
+        .child(
+            ul().class("legend")
+                .style("--i:3")
+                .children(Verified::ALL.map(|v| {
+                    li().child(span().class(v.class()).text(v.label()))
+                        .child(span().text(v.meaning()))
+                })),
+        )
         .child(
             p().class("muted")
                 .style("--i:4")

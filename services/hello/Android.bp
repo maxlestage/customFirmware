@@ -1,0 +1,25 @@
+// Le premier service Binder de customFirmware, écrit en Rust.
+// Il sert de modèle aux couches matérielles (HAL) du projet.
+
+aidl_interface {
+    name: "customfirmware.hello",
+    srcs: ["aidl/customfirmware/hello/*.aidl"],
+    local_include_dir: "aidl",
+    unstable: true, // tant que l'interface change
+    backend: {
+        rust: {
+            enabled: true, // le Rust n'est pas activé par défaut
+        },
+    },
+}
+
+rust_binary {
+    name: "customfirmware-hello",
+    srcs: ["src/main.rs"],
+    rustlibs: [
+        "customfirmware.hello-rust",
+        "libbinder_rs",
+    ],
+    // Dans system_ext : la partition des ajouts au système d'AOSP.
+    system_ext_specific: true,
+}

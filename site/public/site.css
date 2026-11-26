@@ -453,6 +453,7 @@ html body .button:active, .toc a:active, html body > header nav a:active { trans
 }
 .badge.yes { color: var(--ok); }
 .badge.partly { color: var(--accent); }
+.badge.untested { color: var(--tip); }
 .badge.no { color: var(--muted); border-style: dashed; }
 
 /* Sommaire : un menu dépliant sur téléphone, une colonne collante sur grand écran */
