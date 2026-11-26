@@ -22,8 +22,8 @@ html:root {
   }
 }
 
-/* overflow-x: clip : la grille de fond, qui dépasse de l'écran pour pouvoir dériver,
-   ne doit pas créer de défilement horizontal sur téléphone. */
+/* Rien ne doit dépasser de l'écran : chaque règle ci-dessous est écrite pour cela.
+   overflow-x: clip n'est qu'un filet de sécurité (il ne gêne pas position: sticky). */
 html { scroll-behavior: smooth; -webkit-tap-highlight-color: transparent; overflow-x: clip; }
 html body { max-width: var(--measure); padding: var(--gutter); font-size: 16px; }
 @media (min-width: 34rem) { html body { font-size: 17px; } }
@@ -31,7 +31,9 @@ section { margin-bottom: clamp(3rem, 8vw, 5rem); scroll-margin-top: 1rem; }
 h1, h2 { text-wrap: balance; }
 html body h1 { font-size: clamp(1.9rem, 7.5vw, 3.2rem); }
 html body h2 { font-size: clamp(1.4rem, 5vw, 1.7rem); }
-p, li { overflow-wrap: break-word; }
+/* break-word, et non anywhere : les mots trop longs sont coupés, mais les numéros
+   et les pastilles ne sont pas réduits à une lettre par ligne. */
+html body { overflow-wrap: break-word; }
 small { display: block; margin-top: .2em; font-size: .88em; }
 :focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 4px; }
 
@@ -51,17 +53,12 @@ html body > header { display: block; padding-bottom: .8rem; margin-bottom: 1.2re
 }
 html body > header nav {
   display: flex;
-  flex-wrap: nowrap;
+  flex-wrap: wrap;
   gap: .5rem;
-  margin: .5rem calc(-1 * var(--gutter)) 0;
-  padding: .2rem var(--gutter);
-  overflow-x: auto;
-  scrollbar-width: none;
+  margin: .5rem 0 0;
   font-size: .92rem;
 }
-html body > header nav::-webkit-scrollbar { display: none; }
 html body > header nav a {
-  flex: none;
   padding: .55rem .95rem;
   border: 1px solid var(--line);
   border-radius: 999px;
@@ -70,7 +67,7 @@ html body > header nav a {
 html body > header nav a.nav-guide { background: var(--accent); border-color: var(--accent); color: var(--accent-fg); font-weight: 600; }
 @media (min-width: 52rem) {
   html body > header { display: flex; justify-content: space-between; align-items: center; padding-bottom: 1.2rem; margin-bottom: 2rem; }
-  html body > header nav { margin: 0; padding: 0; gap: 1.3rem; overflow: visible; font-size: .95rem; }
+  html body > header nav { margin: 0; gap: 1.3rem; font-size: .95rem; }
   html body > header nav a { padding: 0; border: 0; border-radius: 0; position: relative; }
   html body > header nav a.nav-guide { background: none; color: var(--accent); }
   html body > header nav a::after {
@@ -117,7 +114,7 @@ html body > header nav a.nav-guide { background: var(--accent); border-color: va
   background: color-mix(in srgb, var(--accent) 8%, transparent);
   border-radius: 0 var(--radius) var(--radius) 0;
 }
-.notice p { margin: 0; font-size: .95em; }
+.notice p { margin: 0; min-width: 0; font-size: .95em; }
 
 /* Boutons : pleine largeur et faciles à toucher sur téléphone */
 .intro .row { flex-direction: column; align-items: stretch; }
@@ -166,11 +163,11 @@ html body > footer { flex-direction: column; align-items: flex-start; gap: .6rem
    tracés SVG). Rien ne bouge pour qui préfère réduire les animations.
    =================================================================== */
 
-/* Fond : une grille de points qui dérive lentement */
+/* Fond : une grille de points dont le motif dérive lentement */
 html body::before {
   content: "";
   position: fixed;
-  inset: -40px;
+  inset: 0;
   z-index: -1;
   pointer-events: none;
   background-image: radial-gradient(color-mix(in srgb, var(--fg) 13%, transparent) 1px, transparent 1.4px);
@@ -178,7 +175,7 @@ html body::before {
   mask-image: linear-gradient(to bottom, #000, transparent 70%);
   animation: drift 40s linear infinite;
 }
-@keyframes drift { to { transform: translate(28px, 28px); } }
+@keyframes drift { to { background-position: 28px 28px; } }
 
 /* Barre de lecture en haut de l'écran */
 .scroll-progress {
@@ -443,13 +440,12 @@ html body .button:active, .toc a:active, html body > header nav a:active { trans
 
 .badge {
   display: inline-block;
-  font: 600 .68rem/1 var(--mono);
+  font: 600 .68rem/1.5 var(--mono);
   text-transform: uppercase;
   letter-spacing: .07em;
   padding: .45em .75em;
   border-radius: 999px;
   border: 1px solid currentColor;
-  white-space: nowrap;
 }
 .badge.yes { color: var(--ok); }
 .badge.partly { color: var(--accent); }
@@ -486,12 +482,13 @@ nav.toc { display: none; }
 @media (hover: hover) {
   .toc-list a:hover { background: color-mix(in srgb, var(--accent) 9%, transparent); color: var(--accent); transform: translateX(4px); }
 }
-.toc-num { font: 500 .75rem var(--mono); color: var(--muted); font-variant-numeric: tabular-nums; }
+.toc-num { flex: none; font: 500 .75rem var(--mono); color: var(--muted); font-variant-numeric: tabular-nums; }
 
 /* Étapes */
 .guide-step { padding: 0 0 2rem; margin: 0 0 2rem; border-bottom: 1px solid var(--line); scroll-margin-top: 1rem; }
 .guide-step:last-child { border-bottom: 0; }
 .step-head { display: flex; gap: .8rem; align-items: flex-start; }
+.step-head > div { min-width: 0; }
 .step-head h2 { margin: 0 0 .35rem; }
 .step-num {
   flex: none; display: grid; place-items: center;
@@ -506,7 +503,8 @@ nav.toc { display: none; }
 .guide-list li + li { margin-top: .5em; }
 .step-source { font-size: .88rem; color: var(--muted); margin: .4rem 0 0; }
 
-/* Terminaux et fichiers : toujours sombres, d'un bord à l'autre sur téléphone */
+/* Terminaux et fichiers : toujours sombres, d'un bord à l'autre sur téléphone.
+   Les longues lignes passent à la ligne : pas de défilement horizontal. */
 figure.terminal {
   margin: 0 calc(-1 * var(--gutter)) 1.2rem;
   border-radius: 0;
@@ -517,6 +515,7 @@ figure.terminal {
 }
 @media (min-width: 34rem) { figure.terminal { margin-inline: 0; border-radius: var(--radius); border: 1px solid #2a2a38; } }
 figure.terminal figcaption {
+  min-width: 0;
   display: flex; align-items: center; gap: .8rem;
   padding: .55rem var(--gutter);
   font: 500 .74rem var(--mono);
@@ -529,14 +528,13 @@ figure.terminal figcaption {
 figure.terminal.file figcaption { color: #ffb38a; }
 .dots { flex: none; width: 10px; height: 10px; border-radius: 50%; background: #ff5f57; box-shadow: 16px 0 #febc2e, 32px 0 #28c840; margin-right: 32px; }
 figure.terminal pre {
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
+  overflow: hidden;
   margin: 0; border: 0; border-radius: 0; background: transparent;
   padding: .9rem var(--gutter);
   font-size: .78rem; line-height: 1.6;
 }
 @media (min-width: 34rem) { figure.terminal pre { padding: 1rem 1.1rem; font-size: .84rem; } }
-figure.terminal code { color: inherit; white-space: pre; background: none; padding: 0; }
+figure.terminal code { color: inherit; white-space: break-spaces; overflow-wrap: anywhere; background: none; padding: 0; }
 
 /* Encadrés */
 .callout {
@@ -569,8 +567,6 @@ figure.terminal code { color: inherit; white-space: pre; background: none; paddi
     animation-timeline: view();
     animation-range: entry 20% cover 35%;
   }
-  .parts.yes.reveal { animation-name: from-left; }
-  .parts.no.reveal { animation-name: from-right; }
   .parts li {
     animation: rise linear both;
     animation-timeline: view();
@@ -585,7 +581,15 @@ figure.terminal code { color: inherit; white-space: pre; background: none; paddi
   .steps li.done.reveal .check path { animation: draw linear both; animation-timeline: view(); animation-range: entry 50% cover 40%; }
   .guide-step .step-num { animation: pop linear both; animation-timeline: view(); animation-range: entry 0% entry 60%; }
   .guide-step figure.terminal pre { animation: wipe linear both; animation-timeline: view(); animation-range: entry 10% cover 30%; }
-  .guide-step .callout { animation: from-left linear both; animation-timeline: view(); animation-range: entry 0% entry 80%; }
+  .guide-step .callout { animation: rise linear both; animation-timeline: view(); animation-range: entry 0% entry 80%; }
+}
+@media (min-width: 52rem) {
+  @supports (animation-timeline: view()) {
+    /* Glissements latéraux : seulement là où les marges de la page sont plus larges
+       que le décalage, pour que rien ne dépasse de l'écran. */
+    .parts.yes.reveal { animation-name: from-left; }
+    .parts.no.reveal { animation-name: from-right; }
+  }
 }
 @keyframes from-left { from { opacity: 0; transform: translateX(-24px); } }
 @keyframes from-right { from { opacity: 0; transform: translateX(24px); } }
