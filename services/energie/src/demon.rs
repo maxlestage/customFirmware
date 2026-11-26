@@ -2,6 +2,7 @@
 //! `energie.conf`, l'applique quand il change, et tient le journal de consommation.
 //!
 //! Il n'empêche jamais le téléphone de dormir : son attente s'arrête avec lui en veille.
+//! Il relit ses réglages dès qu'un fichier change : modifier un profil suffit.
 
 use crate::capteurs::{Batterie, Ecran};
 use crate::profil::{self, Profil};
@@ -122,42 +123,96 @@ fn note(texte: &str) {
     eprintln!("energie [{}] {texte}", maintenant());
 }
 
-pub fn lancer(sys: &Systeme, dossier: &Path) -> Result<(), String> {
-    let regles = Regles::charger(dossier)?;
-    // Tous les profils sont lus au départ : une faute de frappe se voit tout de suite.
-    let mut profils = std::collections::BTreeMap::new();
-    for nom in regles.profils() {
-        profils.insert(nom.clone(), Profil::charger(dossier, nom)?);
+/// Le profil imposé à la main (`energie forcer <profil>`), s'il y en a un.
+pub fn force(dossier: &Path) -> Option<String> {
+    let nom = std::fs::read_to_string(dossier.join("force")).ok()?;
+    let nom = nom.trim();
+    profil::nom_valide(nom).then(|| nom.to_string())
+}
+
+/// La date et la taille de chaque fichier de réglages : si elles changent, on relit tout.
+fn signature(dossier: &Path) -> Vec<(String, Option<SystemTime>, u64)> {
+    let mut fichiers = vec![dossier.join("energie.conf"), dossier.join("force")];
+    if let Ok(entrees) = std::fs::read_dir(dossier.join("profils")) {
+        fichiers.extend(entrees.flatten().map(|e| e.path()));
     }
-    note(&format!("démarré, règles : {regles:?}"));
+    let mut signature: Vec<_> = fichiers
+        .iter()
+        .map(|f| {
+            let m = std::fs::metadata(f).ok();
+            (
+                f.display().to_string(),
+                m.as_ref().and_then(|m| m.modified().ok()),
+                m.map_or(0, |m| m.len()),
+            )
+        })
+        .collect();
+    signature.sort();
+    signature
+}
+
+/// Lit les règles et vérifie tous les profils qu'elles nomment.
+fn charger(dossier: &Path) -> Result<Regles, String> {
+    let regles = Regles::charger(dossier)?;
+    for nom in regles.profils() {
+        Profil::charger(dossier, nom)?;
+    }
+    Ok(regles)
+}
+
+/// Tourne jusqu'à l'arrêt du téléphone. Une erreur dans les réglages ne l'arrête pas :
+/// elle est notée, et les réglages précédents restent en place jusqu'à la correction.
+pub fn lancer(sys: &Systeme, dossier: &Path) -> Result<(), String> {
+    note("démarré");
     let fichier_journal = dossier.join("journal.csv");
+    let mut regles = Regles::default();
+    let mut vu = None;
     let mut actif: Option<String> = None;
     let mut dernier_journal = 0;
     loop {
+        let signature = signature(dossier);
+        if vu.as_ref() != Some(&signature) {
+            match charger(dossier) {
+                Ok(r) => {
+                    note(&format!("réglages lus : {r:?}"));
+                    regles = r;
+                    actif = None; // un profil a pu changer : on réapplique
+                }
+                Err(e) => note(&format!("réglages refusés, les précédents restent : {e}")),
+            }
+            vu = Some(signature);
+        }
         let batterie = Batterie::lire(sys, &regles.batterie);
         let ecran = Ecran::lire(sys, &regles.ecran);
-        let voulu = regles.choisir(&batterie, ecran);
-        if actif.as_deref() != Some(voulu) {
-            let bilan = profil::appliquer(sys, dossier, &profils[voulu])?;
-            note(&format!(
-                "profil {voulu} (écran {}, batterie {} {}) : {} changé(s), {} erreur(s)",
-                ecran.nom(),
-                batterie
-                    .capacite
-                    .map(|c| format!("{c} %"))
-                    .unwrap_or_default(),
-                batterie.statut,
-                bilan.changes.len(),
-                bilan.erreurs.len()
-            ));
-            for e in &bilan.erreurs {
-                note(&format!("  erreur : {e}"));
+        let voulu = force(dossier).unwrap_or_else(|| regles.choisir(&batterie, ecran).to_string());
+        if actif.as_deref() != Some(voulu.as_str()) {
+            let resultat =
+                Profil::charger(dossier, &voulu).and_then(|p| profil::appliquer(sys, dossier, &p));
+            match resultat {
+                Ok(bilan) => {
+                    note(&format!(
+                        "profil {voulu} (écran {}, batterie {} {}) : {} changé(s), {} erreur(s)",
+                        ecran.nom(),
+                        batterie
+                            .capacite
+                            .map(|c| format!("{c} %"))
+                            .unwrap_or_default(),
+                        batterie.statut,
+                        bilan.changes.len(),
+                        bilan.erreurs.len()
+                    ));
+                    for e in &bilan.erreurs {
+                        note(&format!("  erreur : {e}"));
+                    }
+                }
+                Err(e) => note(&format!("profil {voulu} non appliqué : {e}")),
             }
-            actif = Some(voulu.to_string());
+            // Même en cas d'erreur : on ne réessaie qu'au prochain changement.
+            actif = Some(voulu.clone());
         }
         let t = maintenant();
         if regles.journal_s > 0 && t.saturating_sub(dernier_journal) >= regles.journal_s {
-            if let Err(e) = journal::ajouter(&fichier_journal, t, voulu, ecran, &batterie) {
+            if let Err(e) = journal::ajouter(&fichier_journal, t, &voulu, ecran, &batterie) {
                 note(&format!("journal : {e}"));
             }
             dernier_journal = t;
@@ -232,5 +287,29 @@ mod tests {
         for nom in regles.profils() {
             Profil::charger(&dossier, nom).unwrap();
         }
+    }
+
+    #[test]
+    fn l_integration_android_est_coherente() {
+        let racine = Path::new(env!("CARGO_MANIFEST_DIR"));
+        let lire = |f: &str| std::fs::read_to_string(racine.join(f)).unwrap();
+        let (bp, rc, contextes) = (
+            lire("Android.bp"),
+            lire("energie.rc"),
+            lire("sepolicy/file_contexts"),
+        );
+        // Chaque profil livré est installé par AOSP.
+        for nom in profil::liste(&racine.join("reglages")).iter().skip(1) {
+            assert!(
+                bp.contains(&format!("\"reglages/profils/{nom}.conf\"")),
+                "{nom} manque dans Android.bp"
+            );
+        }
+        // Le binaire lancé par init est celui que la politique SELinux étiquette.
+        assert!(
+            rc.contains("service customfirmware-energie /system_ext/bin/customfirmware-energie ")
+        );
+        assert!(contextes.contains("/bin/customfirmware-energie "));
+        assert!(bp.contains("name: \"customfirmware-energie\""));
     }
 }

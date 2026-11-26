@@ -5,3 +5,6 @@
 PRODUCT_PACKAGES += \
     customfirmware-hello \
     customfirmware-energie
+
+# La politique SELinux d'energie (system_ext, privée).
+SYSTEM_EXT_PRIVATE_SEPOLICY_DIRS += vendor/customfirmware/services/energie/sepolicy
