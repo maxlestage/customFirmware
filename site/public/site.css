@@ -1,4 +1,6 @@
 /* Les styles du site, par-dessus le thème intégré de Paquets.
+   Écrits « mobile first » : les règles de base visent un téléphone, et les
+   requêtes @media (min-width: …) ajoutent ce qui change sur un écran plus grand.
    Le thème est écrit dans la page après ce fichier : une règle qui le contredit doit
    être plus précise que la sienne (html:root, html body, header nav...). */
 
@@ -7,79 +9,143 @@ html:root {
   --accent-fg: #fff;
   --radius: 10px;
   --ok: #15803d;
+  --tip: #4f6bff;
   --measure: 62rem;
+  --gutter: clamp(1rem, 4vw, 3rem);
 }
 @media (prefers-color-scheme: dark) {
   html:root {
     --accent: #ff8a4c;
     --accent-fg: #1c0f06;
     --ok: #4ade80;
+    --tip: #8ea0ff;
   }
 }
 
-html { scroll-behavior: smooth; }
-@media (prefers-reduced-motion: reduce) {
-  html { scroll-behavior: auto; }
-}
-
-html body { max-width: var(--measure); }
-section { margin-bottom: clamp(3rem, 8vw, 5rem); scroll-margin-top: 1.5rem; }
+/* overflow-x: clip : la grille de fond, qui dépasse de l'écran pour pouvoir dériver,
+   ne doit pas créer de défilement horizontal sur téléphone. */
+html { scroll-behavior: smooth; -webkit-tap-highlight-color: transparent; overflow-x: clip; }
+html body { max-width: var(--measure); padding: var(--gutter); font-size: 16px; }
+@media (min-width: 34rem) { html body { font-size: 17px; } }
+section { margin-bottom: clamp(3rem, 8vw, 5rem); scroll-margin-top: 1rem; }
 h1, h2 { text-wrap: balance; }
+html body h1 { font-size: clamp(1.9rem, 7.5vw, 3.2rem); }
+html body h2 { font-size: clamp(1.4rem, 5vw, 1.7rem); }
+p, li { overflow-wrap: break-word; }
 small { display: block; margin-top: .2em; font-size: .88em; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 4px; }
 
-/* En-tête */
+/* ------------------------------------------------------------------
+   En-tête : le nom, puis une rangée de liens que l'on fait défiler du
+   doigt sur téléphone ; sur un grand écran, tout tient sur une ligne.
+   ------------------------------------------------------------------ */
+html body > header { display: block; padding-bottom: .8rem; margin-bottom: 1.2rem; }
 .brand {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.75rem;
   font: 600 1rem var(--mono);
   color: var(--fg);
   text-decoration: none;
   letter-spacing: -.01em;
 }
-header nav { gap: .4rem 1.3rem; font-size: .95rem; }
+html body > header nav {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: .5rem;
+  margin: .5rem calc(-1 * var(--gutter)) 0;
+  padding: .2rem var(--gutter);
+  overflow-x: auto;
+  scrollbar-width: none;
+  font-size: .92rem;
+}
+html body > header nav::-webkit-scrollbar { display: none; }
+html body > header nav a {
+  flex: none;
+  padding: .55rem .95rem;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--fg);
+}
+html body > header nav a.nav-guide { background: var(--accent); border-color: var(--accent); color: var(--accent-fg); font-weight: 600; }
+@media (min-width: 52rem) {
+  html body > header { display: flex; justify-content: space-between; align-items: center; padding-bottom: 1.2rem; margin-bottom: 2rem; }
+  html body > header nav { margin: 0; padding: 0; gap: 1.3rem; overflow: visible; font-size: .95rem; }
+  html body > header nav a { padding: 0; border: 0; border-radius: 0; position: relative; }
+  html body > header nav a.nav-guide { background: none; color: var(--accent); }
+  html body > header nav a::after {
+    content: "";
+    position: absolute;
+    left: 0; right: 0; bottom: -4px;
+    height: 2px;
+    background: var(--accent);
+    transform: scaleX(0);
+    transform-origin: right;
+    transition: transform .3s ease;
+  }
+  html body > header nav a:hover::after, html body > header nav a:focus-visible::after { transform: scaleX(1); transform-origin: left; }
+}
 
-/* Introduction */
-.intro { padding: clamp(1.5rem, 6vw, 4rem) 0 0; }
-.intro h1 { max-width: 20ch; margin: 0 0 .5em; }
+/* ------------------------------------------------------------------
+   Introduction : l'illustration au-dessus du texte sur téléphone, à côté
+   sur un grand écran.
+   ------------------------------------------------------------------ */
+.intro { display: grid; grid-template-columns: minmax(0, 1fr); gap: 1.5rem; padding: .5rem 0 0; }
+.intro-art { order: -1; width: min(15rem, 70vw); margin: 0 auto; }
+.intro h1 { margin: 0 0 .5em; }
+@media (min-width: 52rem) {
+  .intro { grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 2rem; align-items: center; padding-top: 3rem; }
+  .intro-art { order: 0; width: auto; margin: 0; }
+  .intro h1 { max-width: 20ch; }
+}
 .eyebrow {
-  font: 600 .78rem var(--mono);
+  font: 600 .74rem var(--mono);
   text-transform: uppercase;
   letter-spacing: .12em;
   color: var(--accent);
   margin-bottom: 1em;
 }
-.lead { font-size: 1.2em; color: var(--muted); max-width: 38rem; }
+.lead { font-size: 1.12em; color: var(--muted); max-width: 38rem; }
 .notice {
   display: flex;
   align-items: center;
-  gap: 1rem;
+  gap: .9rem;
   max-width: 38rem;
-  padding: .8rem 1.1rem;
+  padding: .8rem 1rem;
   margin-bottom: 1.4rem;
   border-left: 3px solid var(--accent);
   background: color-mix(in srgb, var(--accent) 8%, transparent);
   border-radius: 0 var(--radius) var(--radius) 0;
 }
-.notice p { margin: 0; }
+.notice p { margin: 0; font-size: .95em; }
 
-/* Tableau de l'appareil */
-.table-wrap { overflow-x: auto; }
+/* Boutons : pleine largeur et faciles à toucher sur téléphone */
+.intro .row { flex-direction: column; align-items: stretch; }
+html body .button { min-height: 3rem; }
+@media (min-width: 34rem) { .intro .row { flex-direction: row; align-items: center; } }
+
+/* ------------------------------------------------------------------
+   Tableau de l'appareil : une carte par ligne sur téléphone, un vrai
+   tableau à partir de 34rem.
+   ------------------------------------------------------------------ */
 .table-wrap table { margin: 0; }
-.table-wrap th {
-  width: 13rem;
-  vertical-align: top;
-  white-space: nowrap;
-  padding-left: 0;
-}
-.table-wrap td { padding-right: 0; }
-.table-wrap tr:last-child > * { border-bottom: 0; }
-@media (max-width: 34rem) {
-  .table-wrap tr { display: block; padding: .7em 0; border-bottom: 1px solid var(--line); }
-  .table-wrap tr:last-child { border-bottom: 0; }
-  .table-wrap th, .table-wrap td { display: block; width: auto; padding: 0; border: 0; white-space: normal; }
-  .table-wrap th { margin-bottom: .2em; }
+.table-wrap tr { display: block; padding: .8em 0; border-bottom: 1px solid var(--line); }
+.table-wrap tr:last-child { border-bottom: 0; }
+.table-wrap th, .table-wrap td { display: block; padding: 0; border: 0; }
+.table-wrap th { margin-bottom: .25em; }
+@media (min-width: 34rem) {
+  .table-wrap tr { display: table-row; padding: 0; }
+  .table-wrap th, .table-wrap td { display: table-cell; padding: .65em .8em; border-bottom: 1px solid var(--line); }
+  .table-wrap th { width: 13rem; vertical-align: top; white-space: nowrap; padding-left: 0; margin: 0; }
+  .table-wrap td { padding-right: 0; }
+  .table-wrap tr:last-child > * { border-bottom: 0; }
 }
 
-/* En Rust / repris tel quel */
-.grid.two { grid-template-columns: repeat(auto-fit, minmax(min(100%, 19rem), 1fr)); }
+/* En Rust / repris tel quel : l'une sous l'autre, puis côte à côte */
+html body .grid.two { grid-template-columns: minmax(0, 1fr); }
+@media (min-width: 52rem) { html body .grid.two { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+html body .parts { padding: 1.2rem 1.1rem; }
+@media (min-width: 34rem) { html body .parts { padding: 1.4rem 1.6rem; } }
 .parts h3 { margin: 0 0 1rem; font-size: 1.1rem; }
 .parts.yes { border-top: 3px solid var(--accent); }
 .parts.no { border-top: 3px solid var(--muted); }
@@ -88,12 +154,12 @@ header nav { gap: .4rem 1.3rem; font-size: .95rem; }
 .parts li strong { display: block; }
 .parts li span { color: var(--muted); font-size: .95em; }
 
-/* Risques et sources */
+/* Sources et pied de page */
 .sources { padding-left: 1.2rem; margin: 0; }
-.sources li + li { margin-top: .5em; }
+.sources li + li { margin-top: .7em; }
 .sources a { overflow-wrap: anywhere; }
-
-body > footer { justify-content: space-between; }
+html body > footer { flex-direction: column; align-items: flex-start; gap: .6rem; }
+@media (min-width: 34rem) { html body > footer { flex-direction: row; justify-content: space-between; } }
 
 /* ===================================================================
    Animations : uniquement en 2D (translate, scale, rotate, opacité,
@@ -129,29 +195,12 @@ html body::before {
 }
 @keyframes grow-x { from { transform: scaleX(0); } to { transform: scaleX(1); } }
 
-/* En-tête : curseur qui clignote, liens soulignés au survol */
+/* Curseur qui clignote */
 .caret { color: var(--accent); animation: blink 1.1s steps(1) infinite; }
 @keyframes blink { 50% { opacity: 0; } }
-header nav a { position: relative; }
-header nav a::after {
-  content: "";
-  position: absolute;
-  left: 0; right: 0; bottom: -4px;
-  height: 2px;
-  background: var(--accent);
-  transform: scaleX(0);
-  transform-origin: right;
-  transition: transform .3s ease;
-}
-header nav a:hover::after, header nav a:focus-visible::after { transform: scaleX(1); transform-origin: left; }
 
-/* Introduction : texte à gauche, illustration à droite */
-.intro { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 2rem; align-items: center; }
-@media (max-width: 52rem) {
-  .intro { grid-template-columns: 1fr; }
-  .intro-art { order: -1; max-width: 17rem; margin: 0 auto; }
-}
-.intro-text > *, .lost > * {
+/* Entrée de l'introduction, ligne par ligne */
+.intro-text > *, .lost > *, .guide-intro > * {
   animation: rise .8s cubic-bezier(.2, .7, .2, 1) both;
   animation-delay: calc(var(--i, 0) * 110ms + 100ms);
 }
@@ -169,7 +218,7 @@ header nav a:hover::after, header nav a:focus-visible::after { transform: scaleX
 @keyframes shine { from { background-position: 100% 0; } to { background-position: -150% 0; } }
 
 /* Anneau de progression */
-.ring { width: 3.2rem; height: 3.2rem; flex: none; }
+.ring { width: 3rem; height: 3rem; flex: none; }
 .ring circle { fill: none; stroke-width: 4; }
 .ring .track { stroke: var(--line); }
 .ring .bar {
@@ -181,10 +230,6 @@ header nav a:hover::after, header nav a:focus-visible::after { transform: scaleX
 }
 @keyframes ring { from { stroke-dashoffset: 100; } }
 .ring text { font: 700 11px var(--mono); fill: var(--fg); }
-
-/* Boutons : légère montée et halo au survol */
-html body .button { transition: transform .2s, box-shadow .2s, filter .2s; }
-html body .button:hover { transform: translateY(-2px); box-shadow: 0 8px 24px -10px var(--accent); }
 
 /* L'illustration du téléphone */
 .art { display: block; width: 100%; height: auto; overflow: visible; }
@@ -242,19 +287,19 @@ html body .button:hover { transform: translateY(-2px); box-shadow: 0 8px 24px -1
 .art .chip text { font: 600 12px var(--mono); fill: var(--accent); }
 @keyframes bob { from { transform: translateY(-6px); } to { transform: translateY(6px); } }
 
-/* Bandeau qui défile */
+/* Bandeau qui défile, d'un bord à l'autre de l'écran sur téléphone */
 .ticker {
   overflow: hidden;
-  margin: 0 0 clamp(3rem, 8vw, 5rem);
-  padding: .9rem 0;
+  margin: 0 calc(-1 * var(--gutter)) clamp(3rem, 8vw, 5rem);
+  padding: .8rem 0;
   border-block: 1px solid var(--line);
   mask-image: linear-gradient(90deg, transparent, #000 10%, #000 90%, transparent);
 }
+@media (min-width: 62rem) { .ticker { margin-inline: 0; } }
 .ticker-track { display: flex; width: max-content; animation: marquee 32s linear infinite; }
-.ticker:hover .ticker-track { animation-play-state: paused; }
 .ticker-group { display: flex; }
-.ticker-group span { font: 500 .9rem var(--mono); color: var(--muted); white-space: nowrap; padding: 0 1.2rem; }
-.ticker-group span::before { content: "◆"; color: var(--accent); margin-right: 1.2rem; font-size: .7em; vertical-align: .15em; }
+.ticker-group span { font: 500 .85rem var(--mono); color: var(--muted); white-space: nowrap; padding: 0 1.1rem; }
+.ticker-group span::before { content: "◆"; color: var(--accent); margin-right: 1.1rem; font-size: .7em; vertical-align: .15em; }
 @keyframes marquee { to { transform: translateX(-50%); } }
 
 /* Titres de section : un trait qui s'étire */
@@ -269,48 +314,8 @@ html body h2.reveal::after {
   transform-origin: left;
 }
 
-/* Apparitions au défilement (navigateurs qui savent lier une animation au défilement) */
-@supports (animation-timeline: view()) {
-  .reveal {
-    animation: rise linear both;
-    animation-timeline: view();
-    animation-range: entry 0% entry 70%;
-  }
-  html body h2.reveal::after {
-    animation: grow-x linear both;
-    animation-timeline: view();
-    animation-range: entry 20% cover 35%;
-  }
-  .parts.yes.reveal { animation-name: from-left; }
-  .parts.no.reveal { animation-name: from-right; }
-  .parts li {
-    animation: rise linear both;
-    animation-timeline: view();
-    animation-range: entry calc(10% + var(--i) * 8%) entry calc(70% + var(--i) * 8%);
-  }
-  .steps.steps::after {
-    animation: grow-y linear both;
-    animation-timeline: view();
-    animation-range: entry 30% exit 40%;
-  }
-  .steps li.reveal .marker { animation: pop linear both; animation-timeline: view(); animation-range: entry 30% entry 80%; }
-  .steps li.done.reveal .check path { animation: draw linear both; animation-timeline: view(); animation-range: entry 50% cover 40%; }
-}
-@keyframes from-left { from { opacity: 0; transform: translateX(-40px); } }
-@keyframes from-right { from { opacity: 0; transform: translateX(40px); } }
-@keyframes grow-y { from { transform: scaleY(0); } to { transform: scaleY(1); } }
-@keyframes pop { from { transform: scale(0) rotate(-90deg); } 70% { transform: scale(1.15) rotate(8deg); } to { transform: none; } }
-
-/* Tableau : la ligne survolée glisse légèrement */
-.table-wrap tr > * { transition: transform .25s ease, color .25s; }
-.table-wrap tr:hover > th { color: var(--accent); transform: translateX(4px); }
-
-/* Cartes : montée au survol */
-.parts { transition: transform .3s ease, box-shadow .3s ease; }
-.parts:hover { transform: translateY(-4px); box-shadow: 0 16px 40px -24px color-mix(in srgb, var(--fg) 45%, transparent); }
-
-/* Feuille de route : un rail qui se remplit, des pastilles qui apparaissent */
-/* isolation : le rail reste derrière les pastilles, même quand une étape s'anime. */
+/* Feuille de route : un rail qui se remplit, des pastilles qui apparaissent.
+   isolation : le rail reste derrière les pastilles, même quand une étape s'anime. */
 .steps { position: relative; isolation: isolate; list-style: none; padding: 0; margin: 0; }
 .steps::before, .steps.steps::after {
   content: "";
@@ -326,10 +331,15 @@ html body h2.reveal::after {
 .steps li {
   position: relative;
   display: grid;
-  grid-template-columns: 2.2rem 1fr auto;
-  gap: .3rem 1rem;
+  grid-template-columns: 2.2rem minmax(0, 1fr);
+  gap: .4rem .9rem;
   align-items: start;
   padding: 1rem 0;
+}
+.pill { grid-column: 2; justify-self: start; }
+@media (min-width: 34rem) {
+  .steps li { grid-template-columns: 2.2rem minmax(0, 1fr) auto; gap: .3rem 1rem; }
+  .pill { grid-column: auto; }
 }
 .marker {
   position: relative;
@@ -385,10 +395,6 @@ html body h2.reveal::after {
   animation: breathe 2.4s ease-in-out infinite;
 }
 @keyframes breathe { 50% { transform: scale(1.06); } }
-@media (max-width: 34rem) {
-  .steps li { grid-template-columns: 2.2rem 1fr; }
-  .pill { grid-column: 2; justify-self: start; }
-}
 
 /* Risques : un triangle qui oscille */
 .risks { list-style: none; padding: 0; margin: 0; }
@@ -398,36 +404,41 @@ html body h2.reveal::after {
 .warn path { fill: none; stroke: var(--accent); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 @keyframes wobble { 0%, 70%, 100% { transform: rotate(0); } 78% { transform: rotate(-12deg); } 86% { transform: rotate(10deg); } 93% { transform: rotate(-5deg); } }
 
-/* Sources : le soulignement suit le survol */
-.sources a { text-decoration: none; background: linear-gradient(currentColor, currentColor) 0 100% / 0 1.5px no-repeat; transition: background-size .35s ease; }
-.sources a:hover, .sources a:focus-visible { background-size: 100% 1.5px; }
+/* Sources : un soulignement qui se dessine */
+.sources a { text-decoration: none; background: linear-gradient(currentColor, currentColor) 0 100% / 100% 1px no-repeat; }
 
 /* Page 404 : des chiffres qui rebondissent */
-.big-404 { display: flex; gap: .2em; font: 800 clamp(4rem, 18vw, 9rem)/1 var(--mono); color: var(--accent); margin: 0 0 .2em; }
+.big-404 { display: flex; gap: .2em; font: 800 clamp(4rem, 22vw, 9rem)/1 var(--mono); color: var(--accent); margin: 0 0 .2em; }
 .big-404 span { display: inline-block; animation: bounce 1.6s calc(var(--i) * 140ms) cubic-bezier(.3, 0, .3, 1) infinite; }
 @keyframes bounce { 0%, 100% { transform: translateY(0); } 30% { transform: translateY(-18%) rotate(-4deg); } 55% { transform: translateY(4%); } }
 .lost { display: block; }
 
-@media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after {
-    animation: none !important;
-    transition: none !important;
-    scroll-behavior: auto !important;
-  }
-  .scroll-progress { display: none; }
+/* Appui sur téléphone : un léger enfoncement */
+html body .button:active, .toc a:active, html body > header nav a:active { transform: scale(.97); }
+
+/* Survol : seulement sur les écrans qui ont un pointeur */
+@media (hover: hover) {
+  html body .button { transition: transform .2s, box-shadow .2s, filter .2s; }
+  html body .button:hover { transform: translateY(-2px); box-shadow: 0 8px 24px -10px var(--accent); }
+  .ticker:hover .ticker-track { animation-play-state: paused; }
+  .table-wrap tr > * { transition: transform .25s ease, color .25s; }
+  .table-wrap tr:hover > th { color: var(--accent); transform: translateX(4px); }
+  .parts { transition: transform .3s ease, box-shadow .3s ease; }
+  .parts:hover { transform: translateY(-4px); box-shadow: 0 16px 40px -24px color-mix(in srgb, var(--fg) 45%, transparent); }
+  .sources a { background-size: 0 1.5px; transition: background-size .35s ease; }
+  .sources a:hover, .sources a:focus-visible { background-size: 100% 1.5px; }
 }
 
 /* ===================================================================
    Le guide
    =================================================================== */
 
-header nav a.nav-guide { color: var(--accent); font-weight: 600; }
-
-.guide-intro { padding: clamp(1.5rem, 6vw, 3.5rem) 0 1rem; max-width: 46rem; }
+.guide-intro { padding: .5rem 0 0; max-width: 46rem; }
+@media (min-width: 52rem) { .guide-intro { padding-top: 2.5rem; } }
 .guide-intro h1 { margin: 0 0 .5em; }
-.guide-intro > * { animation: rise .8s cubic-bezier(.2, .7, .2, 1) both; animation-delay: calc(var(--i, 0) * 110ms + 100ms); }
-.legend { list-style: none; padding: 0; display: grid; gap: .6rem; }
-.legend li { display: flex; gap: .8rem; align-items: baseline; font-size: .95em; color: var(--muted); }
+.legend { list-style: none; padding: 0; display: grid; gap: .8rem; }
+.legend li { display: grid; gap: .3rem; justify-items: start; font-size: .95em; color: var(--muted); }
+@media (min-width: 34rem) { .legend li { display: flex; gap: .8rem; align-items: baseline; } }
 .legend .badge { flex: none; }
 
 .badge {
@@ -444,89 +455,148 @@ header nav a.nav-guide { color: var(--accent); font-weight: 600; }
 .badge.partly { color: var(--accent); }
 .badge.no { color: var(--muted); border-style: dashed; }
 
-.guide-layout { display: grid; grid-template-columns: 14rem minmax(0, 1fr); gap: 3rem; align-items: start; margin-top: 2rem; }
-@media (max-width: 52rem) { .guide-layout { grid-template-columns: minmax(0, 1fr); gap: 1.5rem; } }
-
-/* Sommaire : collant sur grand écran */
-nav.toc { display: block; position: sticky; top: 1.5rem; font-size: .9rem; }
-@media (max-width: 52rem) { nav.toc { position: static; border: 1px solid var(--line); border-radius: var(--radius); padding: 1rem 1.2rem; } }
+/* Sommaire : un menu dépliant sur téléphone, une colonne collante sur grand écran */
+.guide-layout { display: grid; grid-template-columns: minmax(0, 1fr); gap: 1.5rem; margin-top: 1.5rem; }
+details.toc-mobile { border: 1px solid var(--line); border-radius: var(--radius); background: var(--card); }
+details.toc-mobile summary {
+  display: flex; justify-content: space-between; align-items: center;
+  min-height: 3rem; padding: .6rem 1rem;
+  font-weight: 600; cursor: pointer; list-style: none;
+}
+details.toc-mobile summary::-webkit-details-marker { display: none; }
+details.toc-mobile summary::after { content: "+"; font: 600 1.3rem var(--mono); color: var(--accent); transition: transform .25s; }
+details.toc-mobile[open] summary::after { transform: rotate(45deg); }
+details.toc-mobile ol { padding: 0 .5rem .6rem; }
+nav.toc { display: none; }
+@media (min-width: 60rem) {
+  .guide-layout { grid-template-columns: 14rem minmax(0, 1fr); gap: 3rem; align-items: start; margin-top: 2rem; }
+  details.toc-mobile { display: none; }
+  nav.toc { display: block; position: sticky; top: 1.5rem; font-size: .9rem; }
+}
 .toc-title { font: 600 .72rem var(--mono); text-transform: uppercase; letter-spacing: .12em; color: var(--muted); margin-bottom: .6rem; }
-.toc ol { list-style: none; padding: 0; margin: 0; display: grid; gap: .1rem; }
-nav.toc a {
+.toc-list { list-style: none; padding: 0; margin: 0; display: grid; gap: .1rem; }
+.toc-list a {
   display: flex; gap: .6rem; align-items: baseline;
-  padding: .35rem .5rem; border-radius: 8px;
+  padding: .6rem .5rem; border-radius: 8px;
   color: var(--fg); text-decoration: none; font-weight: 400;
   transition: background .2s, transform .2s, color .2s;
 }
-nav.toc a:hover, nav.toc a:focus-visible { background: color-mix(in srgb, var(--accent) 9%, transparent); color: var(--accent); transform: translateX(4px); }
+@media (min-width: 60rem) { .toc-list a { padding: .35rem .5rem; } }
+@media (hover: hover) {
+  .toc-list a:hover { background: color-mix(in srgb, var(--accent) 9%, transparent); color: var(--accent); transform: translateX(4px); }
+}
 .toc-num { font: 500 .75rem var(--mono); color: var(--muted); font-variant-numeric: tabular-nums; }
 
 /* Étapes */
-.guide-step { padding: 0 0 2.5rem; margin: 0 0 2.5rem; border-bottom: 1px solid var(--line); scroll-margin-top: 1.5rem; }
+.guide-step { padding: 0 0 2rem; margin: 0 0 2rem; border-bottom: 1px solid var(--line); scroll-margin-top: 1rem; }
 .guide-step:last-child { border-bottom: 0; }
-.step-head { display: flex; gap: 1rem; align-items: flex-start; }
+.step-head { display: flex; gap: .8rem; align-items: flex-start; }
 .step-head h2 { margin: 0 0 .35rem; }
 .step-num {
   flex: none; display: grid; place-items: center;
-  width: 2.6rem; height: 2.6rem; border-radius: 12px;
+  width: 2.3rem; height: 2.3rem; border-radius: 10px;
   background: var(--accent); color: var(--accent-fg);
-  font: 700 .95rem var(--mono);
+  font: 700 .9rem var(--mono);
 }
-.step-meta { display: flex; flex-wrap: wrap; gap: .4rem .9rem; align-items: center; margin: 0; font-size: .88rem; }
-.step-goal { font-size: 1.1em; margin: 1rem 0 1.2rem; }
+@media (min-width: 34rem) { .step-num { width: 2.6rem; height: 2.6rem; border-radius: 12px; } }
+.step-meta { display: flex; flex-wrap: wrap; gap: .4rem .9rem; align-items: center; margin: 0; font-size: .85rem; }
+.step-goal { font-size: 1.08em; margin: 1rem 0 1.2rem; }
 .guide-list { padding-left: 1.3rem; }
-.guide-list li + li { margin-top: .4em; }
+.guide-list li + li { margin-top: .5em; }
 .step-source { font-size: .88rem; color: var(--muted); margin: .4rem 0 0; }
 
-/* Terminaux et fichiers : toujours sombres */
+/* Terminaux et fichiers : toujours sombres, d'un bord à l'autre sur téléphone */
 figure.terminal {
-  margin: 0 0 1.2rem;
-  border-radius: var(--radius);
+  margin: 0 calc(-1 * var(--gutter)) 1.2rem;
+  border-radius: 0;
   overflow: hidden;
   background: #14141b;
-  border: 1px solid #2a2a38;
+  border-block: 1px solid #2a2a38;
   color: #e9e9f1;
 }
+@media (min-width: 34rem) { figure.terminal { margin-inline: 0; border-radius: var(--radius); border: 1px solid #2a2a38; } }
 figure.terminal figcaption {
   display: flex; align-items: center; gap: .8rem;
-  padding: .55rem .9rem;
-  font: 500 .78rem var(--mono);
+  padding: .55rem var(--gutter);
+  font: 500 .74rem var(--mono);
   color: #a3a3b8;
   background: #1c1c26;
   border-bottom: 1px solid #2a2a38;
+  overflow-wrap: anywhere;
 }
+@media (min-width: 34rem) { figure.terminal figcaption { padding-inline: .9rem; font-size: .78rem; } }
 figure.terminal.file figcaption { color: #ffb38a; }
-.dots { display: inline-flex; gap: 6px; flex: none; }
-.dots::before, .dots::after, .dots {
-  content: "";
+.dots { flex: none; width: 10px; height: 10px; border-radius: 50%; background: #ff5f57; box-shadow: 16px 0 #febc2e, 32px 0 #28c840; margin-right: 32px; }
+figure.terminal pre {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  margin: 0; border: 0; border-radius: 0; background: transparent;
+  padding: .9rem var(--gutter);
+  font-size: .78rem; line-height: 1.6;
 }
-.dots { width: 10px; height: 10px; border-radius: 50%; background: #ff5f57; box-shadow: 16px 0 #febc2e, 32px 0 #28c840; margin-right: 32px; }
-figure.terminal pre { overflow-x: auto; margin: 0; border: 0; border-radius: 0; background: transparent; padding: 1rem 1.1rem; font-size: .84rem; line-height: 1.6; }
-figure.terminal code { color: inherit; white-space: pre; }
+@media (min-width: 34rem) { figure.terminal pre { padding: 1rem 1.1rem; font-size: .84rem; } }
+figure.terminal code { color: inherit; white-space: pre; background: none; padding: 0; }
 
 /* Encadrés */
 .callout {
   margin: 0 0 1.2rem;
-  padding: .85rem 1.1rem;
+  padding: .85rem 1rem;
   border-radius: var(--radius);
   border: 1px solid var(--line);
   border-left-width: 4px;
-  font-size: .97em;
+  font-size: .96em;
 }
 .callout.warning { border-left-color: var(--accent); background: color-mix(in srgb, var(--accent) 7%, transparent); }
-.callout.tip { border-left-color: #6d8bff; background: color-mix(in srgb, #6d8bff 7%, transparent); }
+.callout.tip { border-left-color: var(--tip); background: color-mix(in srgb, var(--tip) 7%, transparent); }
 .callout.verify { border-left-color: var(--ok); background: color-mix(in srgb, var(--ok) 7%, transparent); }
 
-/* Animations du guide, en 2D */
 .dots { animation: dots 4s ease-in-out infinite; }
 @keyframes dots { 0%, 85%, 100% { transform: scale(1); } 90% { transform: scale(1.25); } }
+
+/* ------------------------------------------------------------------
+   Apparitions au défilement (navigateurs qui savent lier une animation
+   au défilement ; ailleurs, tout est simplement visible).
+   ------------------------------------------------------------------ */
 @supports (animation-timeline: view()) {
-  .guide-step .step-num { animation: pop linear both; animation-timeline: view(); animation-range: entry 0% entry 60%; }
-  .guide-step figure.terminal pre {
-    animation: wipe linear both;
+  .reveal {
+    animation: rise linear both;
     animation-timeline: view();
-    animation-range: entry 10% cover 30%;
+    animation-range: entry 0% entry 70%;
   }
+  html body h2.reveal::after {
+    animation: grow-x linear both;
+    animation-timeline: view();
+    animation-range: entry 20% cover 35%;
+  }
+  .parts.yes.reveal { animation-name: from-left; }
+  .parts.no.reveal { animation-name: from-right; }
+  .parts li {
+    animation: rise linear both;
+    animation-timeline: view();
+    animation-range: entry calc(10% + var(--i) * 8%) entry calc(70% + var(--i) * 8%);
+  }
+  .steps.steps::after {
+    animation: grow-y linear both;
+    animation-timeline: view();
+    animation-range: entry 30% exit 40%;
+  }
+  .steps li.reveal .marker { animation: pop linear both; animation-timeline: view(); animation-range: entry 30% entry 80%; }
+  .steps li.done.reveal .check path { animation: draw linear both; animation-timeline: view(); animation-range: entry 50% cover 40%; }
+  .guide-step .step-num { animation: pop linear both; animation-timeline: view(); animation-range: entry 0% entry 60%; }
+  .guide-step figure.terminal pre { animation: wipe linear both; animation-timeline: view(); animation-range: entry 10% cover 30%; }
   .guide-step .callout { animation: from-left linear both; animation-timeline: view(); animation-range: entry 0% entry 80%; }
 }
+@keyframes from-left { from { opacity: 0; transform: translateX(-24px); } }
+@keyframes from-right { from { opacity: 0; transform: translateX(24px); } }
+@keyframes grow-y { from { transform: scaleY(0); } to { transform: scaleY(1); } }
+@keyframes pop { from { transform: scale(0) rotate(-90deg); } 70% { transform: scale(1.15) rotate(8deg); } to { transform: none; } }
 @keyframes wipe { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0 0 0 0); } }
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  *, *::before, *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+  .scroll-progress { display: none; }
+}

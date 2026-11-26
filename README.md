@@ -20,5 +20,5 @@ Les faits sur l'appareil, le périmètre du projet et la feuille de route sont d
 | Workflow | Rôle |
 |---|---|
 | [`ci.yml`](.github/workflows/ci.yml) | formatage, clippy, tests et export statique à chaque push ; si tout est vert, la branche est **fusionnée dans `master`** (sauf `wip/...`), puis le site est publié |
-| [`pages.yml`](.github/workflows/pages.yml) | exporte `master` en fichiers statiques et les pousse sur la branche `gh-pages` |
+| [`pages.yml`](.github/workflows/pages.yml) | exporte `master` en fichiers statiques et les publie sur GitHub Pages (source « GitHub Actions ») |
 | [`heroku.yml`](.github/workflows/heroku.yml) | déploie `master` sur l'application Heroku `customfirmware` (secret `HEROKU_API_KEY` requis) |
