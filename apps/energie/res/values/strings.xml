@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Énergie</string>
+    <string name="tuile">Énergie</string>
+    <string name="auto_tuile">Auto · %1$s</string>
+    <string name="auto_court">automatique</string>
+    <string name="auto_choix">Automatique\nLes règles d\'energie.conf : écran éteint, en charge, batterie faible</string>
+    <string name="applique">Profil appliqué : %1$s</string>
+    <string name="dans_deux_secondes">Choisi : %1$s. Le démon l\'applique dans les 2 secondes.</string>
+    <string name="indisponible">Indisponible</string>
+    <string name="indisponible_long">Le service energie ne répond pas : son dossier, /data/misc/energie, est absent ou illisible.</string>
+    <string name="erreur">Impossible de choisir ce profil : %1$s</string>
+    <string name="aide">Les profils sont les fichiers de /data/misc/energie/profils : ajoutez-en ou modifiez-les, ils apparaissent ici. Ajoutez la tuile Énergie aux réglages rapides pour changer de profil d\'un geste.</string>
+</resources>

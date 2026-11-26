@@ -281,7 +281,7 @@ fn forcer(ctx: &Contexte, nom: &str) -> Result<bool, String> {
         return Ok(true);
     }
     Profil::charger(&ctx.dossier, nom)?;
-    std::fs::write(&fichier, nom).map_err(|e| format!("{} : {e}", fichier.display()))?;
+    profil::ecrire_partage(&fichier, nom).map_err(|e| format!("{} : {e}", fichier.display()))?;
     out(format!(
         "Le démon applique {nom} (dans les 2 s s'il tourne) ; `energie forcer auto` pour revenir aux règles."
     ));

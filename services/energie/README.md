@@ -56,6 +56,9 @@ adb shell su -c '/data/local/tmp/energie --modeles /data/local/tmp/energie-model
 
 Sans `--dossier`, il travaille dans `/data/misc/energie`, comme dans le système.
 
+Sans ordinateur, l'application [Énergie](../../apps/energie) fait la même chose que
+`forcer` : une tuile des réglages rapides et un écran de choix.
+
 ## Les commandes
 
 | Commande | Rôle |
@@ -129,4 +132,3 @@ Sur un système `user`, ces lignes disent quelles règles ajouter à
 - compiler le système dans AOSP (`m`) : `energie.rc`, la politique SELinux et
   `Android.bp` sont écrits, mais pas encore passés par la compilation d'AOSP ;
 - l'essayer sur le vrai téléphone, puis régler les profils avec le rapport ;
-- choisir le profil depuis le téléphone, sans ordinateur (une tuile des réglages rapides).

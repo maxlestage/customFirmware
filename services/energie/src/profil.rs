@@ -274,8 +274,16 @@ pub fn appliquer(sys: &Systeme, dossier: &Path, profil: &Profil) -> Result<Bilan
         ecrire(sys, chemin, valeur, &mut bilan);
     }
     origines.enregistrer()?;
-    let _ = fs::write(dossier.join("actif"), &profil.nom);
+    let _ = ecrire_partage(&dossier.join("actif"), &profil.nom);
     Ok(bilan)
+}
+
+/// Écrit un fichier que l'application Énergie (uid system) doit pouvoir lire : 0644,
+/// quel que soit le masque de création du démon (init le règle à 077).
+pub fn ecrire_partage(fichier: &Path, texte: &str) -> std::io::Result<()> {
+    use std::os::unix::fs::PermissionsExt;
+    fs::write(fichier, texte)?;
+    fs::set_permissions(fichier, fs::Permissions::from_mode(0o644))
 }
 
 /// Écrit si la valeur change ; vrai si le fichier a la bonne valeur à la fin.
@@ -414,6 +422,14 @@ mod tests {
         assert_eq!(bilan.inchanges, 1);
         assert_eq!(lire(&max0), "1000000");
         assert_eq!(actif(&dossier).as_deref(), Some("eco"));
+        {
+            use std::os::unix::fs::PermissionsExt;
+            let mode = fs::metadata(dossier.join("actif"))
+                .unwrap()
+                .permissions()
+                .mode();
+            assert_eq!(mode & 0o777, 0o644, "lisible par l'application");
+        }
 
         // Le profil suivant ne touche plus aux fréquences : elles reviennent.
         let nuit = profil("nuit", &format!("{ecriture} = 3000"));

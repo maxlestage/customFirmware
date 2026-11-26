@@ -32,6 +32,11 @@ allow energie sysfs:file r_file_perms;
 allow energie sysfs_batteryinfo:dir r_dir_perms;
 allow energie sysfs_batteryinfo:file r_file_perms;
 
+# L'application Énergie (apps/energie, uid system, domaine system_app) choisit le
+# profil : elle écrit /data/misc/energie/force et lit les profils et le profil actif.
+allow system_app energie_data_file:dir rw_dir_perms;
+allow system_app energie_data_file:file create_file_perms;
+
 # La partition vendor de Nothing peut donner ses propres étiquettes à certains de ces
 # fichiers (GPU, batterie, écran), et une politique système ne peut pas les nommer.
 # Sur un système userdebug, energie est donc permissif : ce qui manque est seulement
