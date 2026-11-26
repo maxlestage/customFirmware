@@ -20,6 +20,8 @@ fn app() -> App {
     // « /guide » et « /guide/ » sont la même route pour Paquets ; les liens visent
     // « /guide/ », que GitHub Pages sert depuis guide/index.html.
     app.get("/guide", guide_page::guide);
+    // Une page par système de l'ordinateur : /guide/fedora/, /guide/macos/…
+    app.get("/guide/:systeme", guide_page::guide_for);
     app.health("/health"); // pour les sondes de disponibilité
     app.get("/*", pages::not_found);
     app
@@ -54,12 +56,16 @@ async fn export(out: &Path) -> io::Result<usize> {
     std::fs::create_dir_all(out)?;
 
     let mut written = 0;
-    for (path, file, status) in [
-        ("/", "index.html", 200),
-        ("/guide/", "guide/index.html", 200),
-        ("/404", "404.html", 404),
-    ] {
-        let res = client.get(path).await;
+    let mut pages = vec![
+        ("/".to_string(), "index.html".to_string(), 200),
+        ("/404".into(), "404.html".into(), 404),
+    ];
+    for os in guide::Os::ALL {
+        let path = guide_page::path(os);
+        pages.push((path.clone(), format!("{}index.html", &path[1..]), 200));
+    }
+    for (path, file, status) in pages {
+        let res = client.get(&path).await;
         if res.status().as_u16() != status {
             return Err(io::Error::other(format!(
                 "GET {path} : {} au lieu de {status}",
@@ -137,6 +143,8 @@ mod tests {
                 .contains("404")
         );
         assert!(out.join("site.css").is_file());
+        let fedora = std::fs::read_to_string(out.join("guide/fedora/index.html")).unwrap();
+        assert!(fedora.contains("sudo dnf install"));
         std::fs::remove_dir_all(out).unwrap();
     }
 
@@ -147,5 +155,35 @@ mod tests {
         assert_eq!(client.get("/guide/").await.status(), 200);
         assert_eq!(client.get("/guide").await.status(), 200);
         assert_eq!(client.get("/nope").await.status(), 404);
+        assert_eq!(client.get("/guide/windows/").await.status(), 404);
+    }
+
+    /// Chaque page ne montre que les commandes de son système.
+    #[tokio::test]
+    async fn each_system_gets_its_own_commands() {
+        let client = app().test().await;
+        let page = |path: &'static str| {
+            let client = &client;
+            async move {
+                let res = client.get(path).await;
+                assert_eq!(res.status(), 200, "{path}");
+                res.text()
+            }
+        };
+        let ubuntu = page("/guide/").await;
+        let fedora = page("/guide/fedora/").await;
+        let arch = page("/guide/arch/").await;
+        let macos = page("/guide/macos/").await;
+        assert!(ubuntu.contains("sudo apt-get install") && !ubuntu.contains("sudo dnf"));
+        assert!(fedora.contains("sudo dnf install") && !fedora.contains("apt-get"));
+        assert!(arch.contains("sudo pacman -S") && !arch.contains("apt-get"));
+        assert!(macos.contains("brew install") && !macos.contains("apt-get"));
+        assert!(macos.contains("7zz x") && ubuntu.contains("7z x"));
+        // La page courante est marquée dans le sélecteur, et les étapes communes restent.
+        for html in [&ubuntu, &fedora, &arch, &macos] {
+            assert_eq!(html.matches(r#"aria-current="page""#).count(), 1);
+            assert!(html.contains("fastboot flashing unlock"));
+        }
+        assert_eq!(page("/guide/ubuntu/").await, ubuntu);
     }
 }

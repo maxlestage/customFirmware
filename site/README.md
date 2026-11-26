@@ -14,9 +14,14 @@ cargo test
 | `src/content.rs` | les textes et les données : l'appareil, le périmètre Rust, la feuille de route, les sources |
 | `src/guide.rs` | le guide pas à pas : chaque étape, ses commandes, ses vérifications et ses sources |
 | `src/pages.rs` | les vues : la page d'accueil et la page 404 |
-| `src/guide_page.rs` | la vue du guide (`/guide/`) |
+| `src/guide_page.rs` | la vue du guide : `/guide/` (Ubuntu, Debian), `/guide/fedora/`, `/guide/arch/`, `/guide/macos/` |
 | `src/main.rs` | les routes et les tests |
 | `public/site.css` | les styles, par-dessus le thème de Paquets |
+
+Le guide a une page par système de l'ordinateur, choisie par un sélecteur en haut de la page
+(de simples liens : la page se garde dans les favoris). Une commande propre à un système
+s'écrit dans un bloc `For(&[Fedora], &[...])` de `src/guide.rs` ; `LINUX` vise les trois
+distributions. Les tests vérifient que chaque page ne montre que les commandes de son système.
 
 Pour mettre le site à jour (une étape terminée, un fait vérifié), modifiez `src/content.rs` :
 le statut d'une étape est `Status::Done`, `Status::Next` ou `Status::Todo`.
