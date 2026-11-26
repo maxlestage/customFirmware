@@ -1,0 +1,5 @@
+# Heroku construit l'image Docker du site (pile « container »). Le contexte de
+# construction est le dossier du Dockerfile : site/.
+build:
+  docker:
+    web: site/Dockerfile

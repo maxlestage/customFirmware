@@ -1,0 +1,138 @@
+/* Les styles du site, par-dessus le thème intégré de Paquets.
+   Le thème est écrit dans la page après ce fichier : une règle qui le contredit doit
+   être plus précise que la sienne (html:root, html body, header nav...). */
+
+html:root {
+  --accent: #b7410e;
+  --accent-fg: #fff;
+  --radius: 10px;
+  --ok: #15803d;
+  --measure: 62rem;
+}
+@media (prefers-color-scheme: dark) {
+  html:root {
+    --accent: #ff8a4c;
+    --accent-fg: #1c0f06;
+    --ok: #4ade80;
+  }
+}
+
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+}
+
+html body { max-width: var(--measure); }
+section { margin-bottom: clamp(3rem, 8vw, 5rem); scroll-margin-top: 1.5rem; }
+h1, h2 { text-wrap: balance; }
+small { display: block; margin-top: .2em; font-size: .88em; }
+
+/* En-tête */
+.brand {
+  font: 600 1rem var(--mono);
+  color: var(--fg);
+  text-decoration: none;
+  letter-spacing: -.01em;
+}
+header nav { gap: .4rem 1.3rem; font-size: .95rem; }
+
+/* Introduction */
+.intro { padding: clamp(1.5rem, 6vw, 4rem) 0 0; }
+.intro h1 { max-width: 20ch; margin: 0 0 .5em; }
+.eyebrow {
+  font: 600 .78rem var(--mono);
+  text-transform: uppercase;
+  letter-spacing: .12em;
+  color: var(--accent);
+  margin-bottom: 1em;
+}
+.lead { font-size: 1.2em; color: var(--muted); max-width: 38rem; }
+.notice {
+  max-width: 38rem;
+  padding: .8rem 1.1rem;
+  border-left: 3px solid var(--accent);
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
+  border-radius: 0 var(--radius) var(--radius) 0;
+}
+
+/* Tableau de l'appareil */
+.table-wrap { overflow-x: auto; }
+.table-wrap table { margin: 0; }
+.table-wrap th {
+  width: 13rem;
+  vertical-align: top;
+  white-space: nowrap;
+  padding-left: 0;
+}
+.table-wrap td { padding-right: 0; }
+.table-wrap tr:last-child > * { border-bottom: 0; }
+@media (max-width: 34rem) {
+  .table-wrap tr { display: block; padding: .7em 0; border-bottom: 1px solid var(--line); }
+  .table-wrap tr:last-child { border-bottom: 0; }
+  .table-wrap th, .table-wrap td { display: block; width: auto; padding: 0; border: 0; white-space: normal; }
+  .table-wrap th { margin-bottom: .2em; }
+}
+
+/* En Rust / repris tel quel */
+.grid.two { grid-template-columns: repeat(auto-fit, minmax(min(100%, 19rem), 1fr)); }
+.parts h3 { margin: 0 0 1rem; font-size: 1.1rem; }
+.parts.yes { border-top: 3px solid var(--accent); }
+.parts.no { border-top: 3px solid var(--muted); }
+.parts ul { list-style: none; padding: 0; margin: 0; }
+.parts li + li { margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--line); }
+.parts li strong { display: block; }
+.parts li span { color: var(--muted); font-size: .95em; }
+
+/* Feuille de route */
+.steps { list-style: none; padding: 0; margin: 0; counter-reset: step; }
+.steps li {
+  counter-increment: step;
+  display: grid;
+  grid-template-columns: 2.2rem 1fr auto;
+  gap: .3rem 1rem;
+  align-items: start;
+  padding: 1rem 0;
+  border-top: 1px solid var(--line);
+}
+.steps li:last-child { border-bottom: 1px solid var(--line); }
+.steps li::before {
+  content: counter(step, decimal-leading-zero);
+  font: 500 .85rem/1.9 var(--mono);
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.steps li.current {
+  background: color-mix(in srgb, var(--accent) 7%, transparent);
+  margin-inline: -1rem;
+  padding-inline: 1rem;
+  border-radius: var(--radius);
+  border-top-color: transparent;
+}
+.steps li.current + li { border-top-color: transparent; }
+.steps li.current::before { color: var(--accent); }
+.step-text strong { display: block; }
+.step-text span { color: var(--muted); font-size: .95em; }
+.pill {
+  font: 600 .7rem/1 var(--mono);
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  padding: .5em .8em;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  color: var(--muted);
+  white-space: nowrap;
+  margin-top: .3em;
+}
+.pill.done { color: var(--ok); border-color: color-mix(in srgb, var(--ok) 45%, transparent); }
+.pill.next { background: var(--accent); border-color: var(--accent); color: var(--accent-fg); }
+@media (max-width: 34rem) {
+  .steps li { grid-template-columns: 2.2rem 1fr; }
+  .pill { grid-column: 2; justify-self: start; }
+}
+
+/* Risques et sources */
+.risks, .sources { padding-left: 1.2rem; margin: 0; }
+.risks li + li, .sources li + li { margin-top: .5em; }
+.sources a { overflow-wrap: anywhere; }
+
+body > footer { justify-content: space-between; }

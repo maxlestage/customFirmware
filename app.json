@@ -1,0 +1,7 @@
+{
+  "name": "customFirmware",
+  "description": "Le site de présentation de customFirmware : AOSP et Rust sur le Nothing Phone (4b).",
+  "keywords": ["rust", "paquets", "aosp", "android"],
+  "stack": "container",
+  "success_url": "/"
+}
