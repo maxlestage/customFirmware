@@ -1,0 +1,177 @@
+<!DOCTYPE html><html lang="fr"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/><title>Guide : AOSP et Rust sur le Nothing Phone (4b) · customFirmware</title><meta name="description" content="Le guide pas à pas du projet customFirmware : sauvegarder, déverrouiller, extraire, compiler AOSP, écrire un HAL en Rust et installer sur le Nothing Phone (4b)."/><meta property="og:title" content="Guide : AOSP et Rust sur le Nothing Phone (4b) · customFirmware"/><meta property="og:description" content="Le guide pas à pas du projet customFirmware : sauvegarder, déverrouiller, extraire, compiler AOSP, écrire un HAL en Rust et installer sur le Nothing Phone (4b)."/><meta property="og:type" content="website"/><meta name="twitter:card" content="summary"/><style>active-island{display:contents}</style><link rel="stylesheet" href="/customFirmware/site.css"/><style>:root{color-scheme:light dark;--bg:#fbfbfd;--fg:#16161d;--muted:#5d5d6e;--line:#e4e4ec;--card:#fff;--accent:#6d4aff;--accent-fg:#fff;--radius:14px;--font:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;--mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace}
+@media (prefers-color-scheme:dark){:root{--bg:#0d0d12;--fg:#ececf3;--muted:#9a9aae;--line:#26263a;--card:#15151d;--accent:#8f74ff}}
+*,*::before,*::after{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0 auto;max-width:72rem;padding:clamp(1rem,4vw,3rem);font:17px/1.65 var(--font);background:var(--bg);color:var(--fg)}
+h1,h2,h3,h4{line-height:1.2;letter-spacing:-.02em;margin:1.6em 0 .6em}
+h1{font-size:clamp(2rem,5vw,3.2rem)}h2{font-size:1.7rem}h3{font-size:1.3rem}
+h1:first-child,h2:first-child{margin-top:0}
+p,ul,ol,table,pre,form{margin:0 0 1.2em}
+a{color:var(--accent);text-underline-offset:.2em}
+img,video,svg{max-width:100%;height:auto}
+hr{border:0;border-top:1px solid var(--line);margin:2.5em 0}
+small,.muted{color:var(--muted)}
+code,pre,kbd{font-family:var(--mono);font-size:.9em}
+code{background:color-mix(in srgb,var(--accent) 10%,transparent);padding:.15em .4em;border-radius:6px}
+pre{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:1rem 1.2rem;overflow:auto}
+pre code{background:none;padding:0}
+blockquote{margin:0 0 1.2em;padding:.2em 1.2em;border-left:3px solid var(--accent);color:var(--muted)}
+header,nav,footer{display:flex;flex-wrap:wrap;align-items:center;gap:1rem 1.5rem}
+header{justify-content:space-between;padding-bottom:1.2rem;margin-bottom:2rem;border-bottom:1px solid var(--line)}
+nav a{color:inherit;text-decoration:none;font-weight:500}nav a:hover{color:var(--accent)}
+footer{margin-top:4rem;padding-top:1.5rem;border-top:1px solid var(--line);color:var(--muted);font-size:.9em}
+button,.button,input[type=submit]{display:inline-flex;align-items:center;justify-content:center;gap:.5em;font:600 .95rem var(--font);padding:.7em 1.3em;border-radius:999px;border:1px solid transparent;background:var(--accent);color:var(--accent-fg);cursor:pointer;text-decoration:none;transition:transform .15s,filter .15s}
+button:hover,.button:hover{filter:brightness(1.1);transform:translateY(-1px)}
+button:active{transform:translateY(0)}
+button.ghost,.button.ghost{background:transparent;color:var(--fg);border-color:var(--line)}
+input,select,textarea{font:inherit;color:inherit;width:100%;padding:.65em .9em;border-radius:10px;border:1px solid var(--line);background:var(--card)}
+input:focus,select:focus,textarea:focus{outline:2px solid color-mix(in srgb,var(--accent) 45%,transparent);border-color:var(--accent)}
+input[type=checkbox],input[type=radio]{width:auto;accent-color:var(--accent)}
+label{display:block;font-weight:500;margin:0 0 .35em}
+form>*+*{margin-top:.9em}
+table{width:100%;border-collapse:collapse}
+th,td{text-align:left;padding:.65em .8em;border-bottom:1px solid var(--line)}
+th{font-size:.8em;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:1.4rem 1.6rem}
+.grid{display:grid;gap:1.2rem;grid-template-columns:repeat(auto-fit,minmax(15rem,1fr))}
+.row{display:flex;flex-wrap:wrap;align-items:center;gap:.8rem}
+.row>input,.row>select,.row>textarea{flex:1 1 12rem;width:auto}
+form.row>*+*{margin-top:0}
+.stack>*+*{margin-top:1rem}
+.center{text-align:center}
+.hero{padding:clamp(2rem,8vw,6rem) 0;text-align:center}
+.hero p{font-size:1.2em;color:var(--muted);max-width:40rem;margin-inline:auto}
+</style><link rel="icon" href="/customFirmware/favicon.svg"/></head><body><div class="scroll-progress" aria-hidden="true"></div><header><a class="brand" href="/customFirmware/">customFirmware<span class="caret" aria-hidden="true">_</span></a><nav aria-label="Sections"><a href="/customFirmware/#appareil">Appareil</a><a href="/customFirmware/#rust">Rust</a><a href="/customFirmware/#feuille-de-route">Feuille de route</a><a href="/customFirmware/#sources">Sources</a><a class="nav-guide" href="/customFirmware/guide/">Guide</a></nav></header><main class="guide"><section class="guide-intro"><p class="eyebrow" style="--i:0">Guide pas à pas</p><h1 style="--i:1">Installer AOSP sur le Nothing Phone (4b), avec le code de l&#x27;appareil en Rust</h1><p class="lead" style="--i:2">Ce guide décrit, dans l&#x27;ordre, tout le chemin entre un Nothing Phone (4b) d&#x27;origine et un système AOSP compilé par vous, dont les services propres à l&#x27;appareil sont écrits en Rust. Chaque étape dit d&#x27;où viennent ses commandes et si elles ont déjà été essayées sur ce téléphone.</p><ul class="legend" style="--i:3"><li><span class="badge yes">Sources officielles</span><span>Les commandes viennent de la documentation d&#x27;AOSP ou de Nothing Archive.</span></li><li><span class="badge partly">À confirmer sur le 4b</span><span>La méthode marche sur des appareils proches ; elle n&#x27;a pas encore été essayée sur le Phone (4b).</span></li><li><span class="badge no">À écrire par le projet</span><span>Le projet doit encore écrire cette partie ; le code montré est un point de départ.</span></li></ul><p class="muted" style="--i:4">Mis à jour le 26 novembre 2026.</p></section><div class="guide-layout"><nav class="toc" aria-label="Étapes du guide"><p class="toc-title">Étapes</p><ol><li><a href="#avant"><span class="toc-num">00</span>Avant de commencer</a></li><li><a href="#ordinateur"><span class="toc-num">01</span>Préparer l&#x27;ordinateur</a></li><li><a href="#informations"><span class="toc-num">02</span>Relever les informations du téléphone</a></li><li><a href="#sauvegarde"><span class="toc-num">03</span>Sauvegarder le système d&#x27;origine</a></li><li><a href="#deverrouiller"><span class="toc-num">04</span>Déverrouiller le bootloader</a></li><li><a href="#extraire"><span class="toc-num">05</span>Extraire les fichiers propriétaires</a></li><li><a href="#aosp"><span class="toc-num">06</span>Télécharger AOSP</a></li><li><a href="#noyau"><span class="toc-num">07</span>Le noyau</a></li><li><a href="#device-tree"><span class="toc-num">08</span>Écrire le device tree</a></li><li><a href="#rust"><span class="toc-num">09</span>Écrire le premier service en Rust</a></li><li><a href="#installer"><span class="toc-num">10</span>Compiler et installer</a></li><li><a href="#retour"><span class="toc-num">11</span>Revenir au système d&#x27;origine</a></li></ol></nav><div class="guide-steps"><section class="guide-step" id="avant"><div class="step-head reveal"><span class="step-num" aria-hidden="true">00</span><div><h2>Avant de commencer</h2><p class="step-meta"><span class="badge yes">Sources officielles</span><span class="muted">10 minutes de lecture</span></p></div></div><p class="step-goal">Savoir ce que l&#x27;on risque et réunir le matériel.</p><p>Rien de ce guide n&#x27;est réversible sans effort. Lisez-le une fois en entier avant de taper la première commande.</p><ul class="guide-list"><li>Un Nothing Phone (4b), modèle A009P, nom de code SuperContra.</li><li>Un câble USB-C qui transporte les données, pas seulement la charge.</li><li>Un ordinateur Linux 64 bits x86, avec au moins 64 Go de mémoire et 400 Go d&#x27;espace libre : 250 Go pour les sources d&#x27;AOSP, 150 Go pour la compilation.</li><li>Une connexion rapide : les sources d&#x27;AOSP pèsent des dizaines de gigaoctets.</li></ul><aside class="callout warning"><strong>Attention. </strong>Déverrouiller le bootloader efface toutes les données du téléphone et peut annuler la garantie. Sur les puces Qualcomm, le niveau de protection Widevine passe de L1 à L3 (vidéo en définition réduite dans certaines applications), et les applications qui vérifient l&#x27;intégrité de l&#x27;appareil (banques, paiement) peuvent refuser de fonctionner.</aside><aside class="callout warning"><strong>Attention. </strong>Une erreur d&#x27;installation peut rendre le téléphone inutilisable. Gardez toujours de côté le firmware d&#x27;origine (étape 03) et ne reverrouillez jamais le bootloader sur un système modifié.</aside><p class="step-source">Source : <a href="https://source.android.com/docs/setup/start/requirements" rel="noopener">AOSP : configuration requise</a></p></section><section class="guide-step" id="ordinateur"><div class="step-head reveal"><span class="step-num" aria-hidden="true">01</span><div><h2>Préparer l&#x27;ordinateur</h2><p class="step-meta"><span class="badge yes">Sources officielles</span><span class="muted">20 minutes</span></p></div></div><p class="step-goal">Installer les outils Android (adb, fastboot, repo), les paquets de compilation et Rust.</p><p>Les commandes ci-dessous sont pour Ubuntu (18.04 ou plus récent), la distribution que la documentation d&#x27;AOSP prend pour exemple.</p><figure class="terminal"><figcaption><span class="dots" aria-hidden="true"></span><span>Paquets de compilation d&#x27;AOSP et repo</span></figcaption><pre><code>sudo apt-get update
+sudo apt-get install git-core gnupg flex bison build-essential zip curl \
+  zlib1g-dev libc6-dev-i386 x11proto-core-dev libx11-dev lib32z1-dev \
+  libgl1-mesa-dev libxml2-utils xsltproc unzip fontconfig
+sudo apt-get install repo
+repo version        # 2.4 ou plus récent</code></pre></figure><figure class="terminal"><figcaption><span class="dots" aria-hidden="true"></span><span>adb et fastboot (platform-tools de Google)</span></figcaption><pre><code>curl -LO https://dl.google.com/android/repository/platform-tools-latest-linux.zip
+unzip platform-tools-latest-linux.zip -d ~
+echo &#x27;export PATH=&quot;$HOME/platform-tools:$PATH&quot;&#x27; &gt;&gt; ~/.bashrc
+source ~/.bashrc
+adb --version &amp;&amp; fastboot --version</code></pre></figure><figure class="terminal"><figcaption><span class="dots" aria-hidden="true"></span><span>Rust, pour les outils du projet</span></figcaption><pre><code>curl --proto &#x27;=https&#x27; --tlsv1.2 -sSf https://sh.rustup.rs | sh
+rustc --version</code></pre></figure><aside class="callout tip"><strong>Astuce. </strong>Si adb ne voit pas le téléphone sans sudo, installez les règles udev d&#x27;Android : sudo apt-get install android-sdk-platform-tools-common, puis débranchez et rebranchez le câble.</aside><p class="step-source">Source : <a href="https://source.android.com/docs/setup/download" rel="noopener">AOSP : télécharger les sources (installation de repo)</a></p></section><section class="guide-step" id="informations"><div class="step-head reveal"><span class="step-num" aria-hidden="true">02</span><div><h2>Relever les informations du téléphone</h2><p class="step-meta"><span class="badge yes">Sources officielles</span><span class="muted">10 minutes</span></p></div></div><p class="step-goal">Noter la version exacte du système et la configuration de l&#x27;appareil, avant d&#x27;y toucher.</p><ol class="guide-list"><li>Ouvrez Paramètres → À propos du téléphone et appuyez sept fois sur « Numéro de build » : les options pour les développeurs apparaissent.</li><li>Dans Paramètres → Système → Options pour les développeurs, activez « Débogage USB ».</li><li>Branchez le téléphone et acceptez la demande d&#x27;autorisation qui s&#x27;affiche.</li></ol><figure class="terminal"><figcaption><span class="dots" aria-hidden="true"></span><span>Ce que le device tree devra reproduire</span></figcaption><pre><code>adb devices                                   # le téléphone doit être listé « device »
+mkdir -p ~/supercontra &amp;&amp; cd ~/supercontra
+adb shell getprop &gt; getprop.txt               # toutes les propriétés, pour plus tard
+adb shell getprop ro.build.display.id         # la version de Nothing OS
+adb shell getprop ro.build.fingerprint
+adb shell getprop ro.board.platform           # le nom de plateforme Qualcomm
+adb shell getprop ro.product.first_api_level
+adb shell getprop ro.boot.dynamic_partitions  # partitions dynamiques (super)
+adb shell getprop ro.virtual_ab.enabled       # mises à jour A/B virtuelles
+adb shell ls /vendor/etc | grep -i fstab      # la table des partitions</code></pre></figure><aside class="callout verify"><strong>Vérifier. </strong>getprop.txt contient plusieurs centaines de lignes, et ro.build.display.id donne une version de la forme SuperContra-B4.1-….</aside><aside class="callout tip"><strong>Astuce. </strong>Copiez le fichier fstab trouvé avec adb pull /vendor/etc/&lt;nom du fichier&gt; . : il décrit les partitions que le système monte au démarrage.</aside><p class="step-source">Source : <a href="https://nothingarchive.tech/docs/guides#unlocking-bootloader" rel="noopener">Nothing Archive : activer les options pour les développeurs</a></p></section><section class="guide-step" id="sauvegarde"><div class="step-head reveal"><span class="step-num" aria-hidden="true">03</span><div><h2>Sauvegarder le système d&#x27;origine</h2><p class="step-meta"><span class="badge partly">À confirmer sur le 4b</span><span class="muted">30 minutes</span></p></div></div><p class="step-goal">Avoir sur l&#x27;ordinateur le firmware complet de votre version, pour pouvoir revenir en arrière.</p><p>Sauvegardez d&#x27;abord vos données personnelles (photos, messages, comptes) : elles seront effacées. Puis téléchargez le firmware d&#x27;origine correspondant exactement à la version relevée à l&#x27;étape 02.</p><p>Nothing ne publie pas d&#x27;images d&#x27;usine. Le projet communautaire Nothing Archive conserve les mises à jour officielles du Phone (4b), déjà découpées en images : image-boot.7z, image-firmware.7z, image-logical.7z.001, .002… et un fichier d&#x27;empreintes -hash.sha256.</p><figure class="terminal"><figcaption><span class="dots" aria-hidden="true"></span><span>Décompresser et vérifier les images</span></figcaption><pre><code>sudo apt-get install p7zip-full
+cd ~/supercontra/stock          # le dossier où vous avez mis les fichiers .7z
+sha256sum -c *-hash.sha256      # si le fichier d&#x27;empreintes est fourni
+7za -y x &quot;*.7z*&quot;
+ls *.img</code></pre></figure><figure class="terminal"><figcaption><span class="dots" aria-hidden="true"></span><span>Si vous n&#x27;avez qu&#x27;une mise à jour complète (fichier OTA .zip)</span></figcaption><pre><code>cargo install payload_dumper              # un extracteur écrit en Rust
+payload_dumper ota.zip --list             # les partitions contenues
+payload_dumper ota.zip -o ~/supercontra/stock</code></pre></figure><aside class="callout verify"><strong>Vérifier. </strong>Le dossier contient des fichiers .img, dont boot.img, init_boot.img, vendor_boot.img, vbmeta.img et les partitions logiques (system, vendor, product…).</aside><aside class="callout warning"><strong>Attention. </strong>Ne téléchargez que la version exacte de votre téléphone, ou une plus récente : revenir à une version plus ancienne peut être refusé par le téléphone.</aside><p class="step-source">Source : <a href="https://nothingarchive.tech/docs/firmware#supercontra" rel="noopener">Nothing Archive : firmware du Phone (4b)</a></p><p class="step-source">Source : <a href="https://docs.rs/crate/payload_dumper/latest" rel="noopener">payload_dumper (Rust)</a></p></section><section class="guide-step" id="deverrouiller"><div class="step-head reveal"><span class="step-num" aria-hidden="true">04</span><div><h2>Déverrouiller le bootloader</h2><p class="step-meta"><span class="badge partly">À confirmer sur le 4b</span><span class="muted">15 minutes</span></p></div></div><p class="step-goal">Autoriser le téléphone à démarrer un système qui n&#x27;est pas signé par Nothing.</p><p>La procédure ci-dessous est celle de Nothing Archive pour les téléphones Nothing ; aucune source ne mentionne encore le Phone (4b) en particulier. Aucun code de déverrouillage n&#x27;est demandé par Nothing pour les modèles documentés.</p><ol class="guide-list"><li>Dans Paramètres → Système → Options pour les développeurs, activez « Déverrouillage OEM » et « Débogage USB ».</li><li>Si l&#x27;option « Déverrouillage OEM » est grisée, connectez le téléphone à Internet quelques minutes, puis réessayez.</li></ol><figure class="terminal"><figcaption><span class="dots" aria-hidden="true"></span><span>Déverrouiller</span></figcaption><pre><code>adb devices
+adb reboot bootloader
+fastboot devices          # le numéro de série doit s&#x27;afficher
+fastboot flashing unlock</code></pre></figure><ol class="guide-list"><li>Sur le téléphone, choisissez l&#x27;option de déverrouillage avec les touches de volume, puis confirmez avec le bouton marche.</li><li>Le téléphone s&#x27;efface et redémarre. Refaites la configuration initiale, réactivez les options pour les développeurs et vérifiez que « Déverrouillage OEM » est toujours activé.</li></ol><aside class="callout verify"><strong>Vérifier. </strong>Au démarrage, le téléphone affiche un avertissement « Orange State » : c&#x27;est normal, il signale un bootloader déverrouillé.</aside><aside class="callout warning"><strong>Attention. </strong>Pour revenir en arrière, il faudra d&#x27;abord réinstaller le système d&#x27;origine complet (étape 11). Reverrouiller (fastboot flashing lock) avec une partition modifiée peut rendre le téléphone inutilisable.</aside><p class="step-source">Source : <a href="https://nothingarchive.tech/docs/guides#unlocking-bootloader" rel="noopener">Nothing Archive : déverrouiller le bootloader</a></p></section><section class="guide-step" id="extraire"><div class="step-head reveal"><span class="step-num" aria-hidden="true">05</span><div><h2>Extraire les fichiers propriétaires</h2><p class="step-meta"><span class="badge partly">À confirmer sur le 4b</span><span class="muted">1 à 2 heures</span></p></div></div><p class="step-goal">Récupérer, depuis le système d&#x27;origine, les binaires de Qualcomm et de Nothing qu&#x27;AOSP ne fournit pas.</p><p>Le modem, le GPU, la caméra ou le Wi-Fi ont besoin de pilotes fermés, rangés dans les partitions vendor, odm et vendor_dlkm. AOSP ne les a pas : on les reprend tels quels depuis les images de l&#x27;étape 03.</p><figure class="terminal"><figcaption><span class="dots" aria-hidden="true"></span><span>Ouvrir la partition vendor en lecture seule</span></figcaption><pre><code>cd ~/supercontra/stock
+file vendor.img                         # ext4 ou EROFS
+sudo mkdir -p /mnt/vendor
+sudo mount -o loop,ro vendor.img /mnt/vendor
+ls /mnt/vendor/lib64 /mnt/vendor/firmware | head</code></pre></figure><p>La liste des fichiers à reprendre s&#x27;écrit dans proprietary-files.txt, à la racine du device tree, un chemin par ligne. Un outil du projet, écrit en Rust, lira cette liste et copiera les fichiers dans vendor/nothing/SuperContra.</p><figure class="terminal file"><figcaption><span class="dots" aria-hidden="true"></span><span>device/nothing/SuperContra/proprietary-files.txt (extrait)</span></figcaption><pre><code># Chaque ligne est un chemin dans les partitions d&#x27;origine.
+vendor/lib64/&lt;bibliothèque&gt;.so
+vendor/firmware/&lt;micrologiciel&gt;
+vendor/etc/init/&lt;service&gt;.rc</code></pre></figure><aside class="callout tip"><strong>Astuce. </strong>Les vrais noms de fichiers se lisent dans /mnt/vendor. Les ports LineageOS d&#x27;appareils Qualcomm proches, comme celui du Phone (4a), montrent à quoi ressemble une liste complète.</aside><p class="step-source">Source : <a href="https://github.com/justjoshin78/frogger-lineage" rel="noopener">Un port voisin : LineageOS pour le Phone (4a), et ses fichiers propriétaires</a></p><figure class="terminal"><figcaption><span class="dots" aria-hidden="true"></span><span>Démonter</span></figcaption><pre><code>sudo umount /mnt/vendor</code></pre></figure></section><section class="guide-step" id="aosp"><div class="step-head reveal"><span class="step-num" aria-hidden="true">06</span><div><h2>Télécharger AOSP</h2><p class="step-meta"><span class="badge yes">Sources officielles</span><span class="muted">1 à 3 heures</span></p></div></div><p class="step-goal">Récupérer les sources d&#x27;Android sur l&#x27;ordinateur.</p><figure class="terminal"><figcaption><span class="dots" aria-hidden="true"></span><span>Initialiser et télécharger</span></figcaption><pre><code>mkdir ~/aosp &amp;&amp; cd ~/aosp
+repo init --partial-clone --no-use-superproject \
+  -b android-latest-release \
+  -u https://android.googlesource.com/platform/manifest
+repo sync -c -j8</code></pre></figure><p>android-latest-release désigne toujours la dernière version publiée d&#x27;Android (Android 17 en novembre 2026). Le système d&#x27;origine du 4b est sous Android 16 : la séparation entre système et vendor d&#x27;Android (Treble) permet en principe de faire tourner un système plus récent sur les pilotes d&#x27;origine.</p><aside class="callout verify"><strong>Vérifier. </strong>La commande repo sync se termine sans erreur et ~/aosp contient build/, frameworks/, system/…</aside><p class="step-source">Source : <a href="https://source.android.com/docs/setup/download" rel="noopener">AOSP : télécharger les sources</a></p></section><section class="guide-step" id="noyau"><div class="step-head reveal"><span class="step-num" aria-hidden="true">07</span><div><h2>Le noyau</h2><p class="step-meta"><span class="badge no">À écrire par le projet</span><span class="muted">1 heure pour le noyau d&#x27;origine</span></p></div></div><p class="step-goal">Démarrer d&#x27;abord avec le noyau d&#x27;origine, puis le recompiler depuis les sources de Nothing.</p><p>Nothing publie les sources du noyau du Phone (4b) (Linux 6.1), mais sans instructions de compilation. Pour le premier démarrage, le plus sûr est de réutiliser le noyau de Nothing, extrait de boot.img : on sait qu&#x27;il fonctionne avec les pilotes d&#x27;origine.</p><figure class="terminal"><figcaption><span class="dots" aria-hidden="true"></span><span>Extraire le noyau d&#x27;origine (outil d&#x27;AOSP)</span></figcaption><pre><code>cd ~/aosp
+source build/envsetup.sh
+m unpack_bootimg
+unpack_bootimg --boot_img ~/supercontra/stock/boot.img --out ~/supercontra/boot
+ls ~/supercontra/boot           # le fichier kernel est le noyau</code></pre></figure><figure class="terminal"><figcaption><span class="dots" aria-hidden="true"></span><span>Les sources, pour plus tard</span></figcaption><pre><code>git clone --depth 1 -b sm6650/b/SuperContra \
+  https://github.com/NothingOSS/android_kernel_msm-6.1_nothing_sm6650.git \
+  ~/supercontra/kernel</code></pre></figure><p>L&#x27;arbre contient les fichiers de Kleaf, le système de compilation par Bazel des noyaux Android, mais pas la commande exacte pour ce téléphone. Trouver cette commande est une tâche du projet.</p><p class="step-source">Source : <a href="https://github.com/NothingOSS/android_kernel_msm-6.1_nothing_sm6650" rel="noopener">NothingOSS : sources du noyau du Phone (4b)</a></p><p class="step-source">Source : <a href="https://source.android.com/docs/setup/build/building-kernels" rel="noopener">AOSP : compiler un noyau</a></p></section><section class="guide-step" id="device-tree"><div class="step-head reveal"><span class="step-num" aria-hidden="true">08</span><div><h2>Écrire le device tree</h2><p class="step-meta"><span class="badge no">À écrire par le projet</span><span class="muted">Plusieurs jours</span></p></div></div><p class="step-goal">Décrire le téléphone à AOSP : son processeur, ses partitions, ses fichiers propriétaires.</p><p>Le device tree est un dossier de fichiers Make qui dit à AOSP comment construire un système pour cet appareil. Voici le squelette ; chaque valeur marquée « à relever » vient de l&#x27;étape 02.</p><figure class="terminal file"><figcaption><span class="dots" aria-hidden="true"></span><span>device/nothing/SuperContra/AndroidProducts.mk</span></figcaption><pre><code>PRODUCT_MAKEFILES := $(LOCAL_DIR)/aosp_SuperContra.mk
+COMMON_LUNCH_CHOICES := aosp_SuperContra-aosp_current-userdebug</code></pre></figure><figure class="terminal file"><figcaption><span class="dots" aria-hidden="true"></span><span>device/nothing/SuperContra/aosp_SuperContra.mk</span></figcaption><pre><code>$(call inherit-product, $(SRC_TARGET_DIR)/product/core_64_bit_only.mk)
+$(call inherit-product, $(SRC_TARGET_DIR)/product/aosp_base_telephony.mk)
+$(call inherit-product, device/nothing/SuperContra/device.mk)
+
+PRODUCT_NAME := aosp_SuperContra
+PRODUCT_DEVICE := SuperContra
+PRODUCT_BRAND := Nothing
+PRODUCT_MANUFACTURER := Nothing
+PRODUCT_MODEL := A009P</code></pre></figure><figure class="terminal file"><figcaption><span class="dots" aria-hidden="true"></span><span>device/nothing/SuperContra/BoardConfig.mk</span></figcaption><pre><code>TARGET_ARCH := arm64
+TARGET_ARCH_VARIANT := armv8-2a
+TARGET_CPU_ABI := arm64-v8a
+TARGET_CPU_VARIANT := generic
+
+TARGET_BOOTLOADER_BOARD_NAME := SuperContra
+TARGET_BOARD_PLATFORM :=            # à relever : ro.board.platform
+
+# Partitions dynamiques : tailles à relever dans les images d&#x27;origine.
+BOARD_SUPER_PARTITION_SIZE :=
+BOARD_SUPER_PARTITION_GROUPS := nothing_dynamic_partitions
+BOARD_NOTHING_DYNAMIC_PARTITIONS_PARTITION_LIST := system system_ext product vendor odm</code></pre></figure><figure class="terminal file"><figcaption><span class="dots" aria-hidden="true"></span><span>device/nothing/SuperContra/device.mk</span></figcaption><pre><code># Le noyau d&#x27;origine, extrait à l&#x27;étape 07.
+LOCAL_KERNEL := device/nothing/SuperContra-kernel/kernel
+PRODUCT_COPY_FILES += $(LOCAL_KERNEL):kernel
+
+# Le premier service Rust du projet (étape 09).
+PRODUCT_PACKAGES += customfirmware-hello</code></pre></figure><aside class="callout verify"><strong>Vérifier. </strong>Après source build/envsetup.sh, la commande lunch sans argument liste aosp_SuperContra-aosp_current-userdebug.</aside><p class="step-source">Source : <a href="https://source.android.com/docs/setup/build/building" rel="noopener">AOSP : compiler (lunch et cibles)</a></p></section><section class="guide-step" id="rust"><div class="step-head reveal"><span class="step-num" aria-hidden="true">09</span><div><h2>Écrire le premier service en Rust</h2><p class="step-meta"><span class="badge partly">À confirmer sur le 4b</span><span class="muted">2 heures</span></p></div></div><p class="step-goal">Ajouter au système un service Binder écrit en Rust, la brique de base de tous les HAL du projet.</p><p>Un HAL Android est un service qui parle le langage Binder, décrit par une interface AIDL. AOSP sait générer le code Rust d&#x27;une interface AIDL : on écrit l&#x27;interface, puis le service en Rust. Le code suit l&#x27;exemple officiel d&#x27;AOSP.</p><figure class="terminal file"><figcaption><span class="dots" aria-hidden="true"></span><span>vendor/customfirmware/hello/aidl/vendor/customfirmware/hello/IHello.aidl</span></figcaption><pre><code>package vendor.customfirmware.hello;
+
+interface IHello {
+    String greet(String name);
+}</code></pre></figure><figure class="terminal file"><figcaption><span class="dots" aria-hidden="true"></span><span>vendor/customfirmware/hello/Android.bp</span></figcaption><pre><code>aidl_interface {
+    name: &quot;vendor.customfirmware.hello&quot;,
+    srcs: [&quot;aidl/vendor/customfirmware/hello/*.aidl&quot;],
+    local_include_dir: &quot;aidl&quot;,
+    unstable: true, // tant que l&#x27;interface change
+    backend: {
+        rust: {
+            enabled: true, // le Rust n&#x27;est pas activé par défaut
+        },
+    },
+}
+
+rust_binary {
+    name: &quot;customfirmware-hello&quot;,
+    srcs: [&quot;src/main.rs&quot;],
+    rustlibs: [
+        &quot;vendor.customfirmware.hello-rust&quot;,
+        &quot;libbinder_rs&quot;,
+    ],
+    init_rc: [&quot;customfirmware-hello.rc&quot;],
+}</code></pre></figure><figure class="terminal file"><figcaption><span class="dots" aria-hidden="true"></span><span>vendor/customfirmware/hello/src/main.rs</span></figcaption><pre><code>use binder::{BinderFeatures, Interface, Result as BinderResult};
+use vendor_customfirmware_hello::aidl::vendor::customfirmware::hello::IHello::{
+    BnHello, IHello,
+};
+
+struct Hello;
+
+impl Interface for Hello {}
+
+impl IHello for Hello {
+    fn greet(&amp;self, name: &amp;str) -&gt; BinderResult&lt;String&gt; {
+        Ok(format!(&quot;Bonjour {name}, depuis Rust&quot;))
+    }
+}
+
+fn main() {
+    let service = BnHello::new_binder(Hello, BinderFeatures::default());
+    binder::add_service(&quot;customfirmware.hello&quot;, service.as_binder())
+        .expect(&quot;impossible d&#x27;enregistrer le service&quot;);
+    binder::ProcessState::join_thread_pool();
+}</code></pre></figure><figure class="terminal file"><figcaption><span class="dots" aria-hidden="true"></span><span>vendor/customfirmware/hello/customfirmware-hello.rc</span></figcaption><pre><code>service customfirmware-hello /system/bin/customfirmware-hello
+    class main
+    user system
+    group system</code></pre></figure><figure class="terminal"><figcaption><span class="dots" aria-hidden="true"></span><span>Compiler le service seul, puis l&#x27;essayer</span></figcaption><pre><code>cd ~/aosp &amp;&amp; source build/envsetup.sh
+lunch aosp_SuperContra-aosp_current-userdebug
+m customfirmware-hello
+# une fois le système installé (étape 10) :
+adb root
+adb shell setenforce 0                 # SELinux permissif, pour ce premier essai seulement
+adb shell service list | grep customfirmware</code></pre></figure><aside class="callout warning"><strong>Attention. </strong>SELinux bloque par défaut un service inconnu. Le mode permissif ne sert qu&#x27;au premier essai : le vrai HAL aura sa politique SELinux, une interface stable et sa déclaration dans le manifeste VINTF.</aside><p class="step-source">Source : <a href="https://source.android.com/docs/setup/build/rust/building-rust-modules/android-rust-patterns" rel="noopener">AOSP : exemple de service AIDL en Rust</a></p><p class="step-source">Source : <a href="https://source.android.com/docs/core/architecture/aidl/aidl-backends" rel="noopener">AOSP : les backends AIDL</a></p></section><section class="guide-step" id="installer"><div class="step-head reveal"><span class="step-num" aria-hidden="true">10</span><div><h2>Compiler et installer</h2><p class="step-meta"><span class="badge partly">À confirmer sur le 4b</span><span class="muted">1 à 6 heures de compilation</span></p></div></div><p class="step-goal">Construire le système complet et l&#x27;installer sur le téléphone.</p><figure class="terminal"><figcaption><span class="dots" aria-hidden="true"></span><span>Compiler</span></figcaption><pre><code>cd ~/aosp
+source build/envsetup.sh
+lunch aosp_SuperContra-aosp_current-userdebug
+m</code></pre></figure><p>La documentation d&#x27;AOSP compte environ 40 minutes sur une machine de 72 cœurs, et 6 heures sur 6 cœurs. Le résultat est dans out/target/product/SuperContra.</p><figure class="terminal"><figcaption><span class="dots" aria-hidden="true"></span><span>Installer</span></figcaption><pre><code>adb reboot bootloader
+fastboot devices
+fastboot flashall -w     # -w efface les données : nécessaire au premier essai</code></pre></figure><aside class="callout verify"><strong>Vérifier. </strong>Le téléphone redémarre sur l&#x27;animation d&#x27;AOSP. Le premier démarrage peut prendre plusieurs minutes.</aside><aside class="callout tip"><strong>Astuce. </strong>Si le téléphone revient au bootloader ou boucle au démarrage, ne paniquez pas : passez à l&#x27;étape 11 pour réinstaller le système d&#x27;origine, puis cherchez la cause dans le journal (adb logcat, s&#x27;il s&#x27;est lancé assez loin).</aside><p class="step-source">Source : <a href="https://source.android.com/docs/setup/test/running" rel="noopener">AOSP : installer une version compilée</a></p></section><section class="guide-step" id="retour"><div class="step-head reveal"><span class="step-num" aria-hidden="true">11</span><div><h2>Revenir au système d&#x27;origine</h2><p class="step-meta"><span class="badge partly">À confirmer sur le 4b</span><span class="muted">20 minutes</span></p></div></div><p class="step-goal">Réinstaller Nothing OS à partir des images sauvegardées à l&#x27;étape 03.</p><p>Nothing Archive fournit un script qui installe toutes les images d&#x27;origine dans le bon ordre. Vérifiez sur sa page qu&#x27;il prend en charge le Phone (4b) avant de l&#x27;utiliser.</p><figure class="terminal"><figcaption><span class="dots" aria-hidden="true"></span><span>Avec le script de Nothing Archive</span></figcaption><pre><code>git clone https://github.com/spike0en/nothing_flasher.git
+# copier le script du Phone (4b) dans ~/supercontra/stock, avec les .img
+cd ~/supercontra/stock
+chmod +x flash_all.sh
+bash flash_all.sh</code></pre></figure><ul class="guide-list"><li>Effacer les données : oui, pour une installation propre.</li><li>Installer sur les deux emplacements (A et B) : oui, recommandé.</li><li>Désactiver le démarrage vérifié (AVB) : non. Répondre oui empêcherait de reverrouiller le bootloader.</li></ul><aside class="callout warning"><strong>Attention. </strong>Si le script affiche une erreur, ne redémarrez pas sur le système : redémarrez sur le bootloader et relancez le script.</aside><figure class="terminal"><figcaption><span class="dots" aria-hidden="true"></span><span>Reverrouiller, seulement sur un système d&#x27;origine propre</span></figcaption><pre><code>adb reboot bootloader
+fastboot flashing lock</code></pre></figure><p class="step-source">Source : <a href="https://nothingarchive.tech/docs/guides" rel="noopener">Nothing Archive : installer le firmware d&#x27;origine</a></p></section></div></div></main><footer><span>Site écrit en Rust avec <a href="https://github.com/maxlestage/Paquets">Paquets</a>.</span><span>Projet indépendant, sans lien avec Nothing, Qualcomm ou Google.</span></footer></body></html>
