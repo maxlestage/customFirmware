@@ -26,7 +26,9 @@ pub const FACTS: &[Fact] = &[
     Fact {
         label: "Système d'origine",
         value: "Nothing OS 4.1, sur Android 16",
-        note: Some("Android 17 est annoncé pour cet appareil, sans date officielle."),
+        note: Some(
+            "Dernière version connue : B4.1-261111-1740, correctif de sécurité de novembre 2026. Android 17 est annoncé, sans date officielle.",
+        ),
     },
     Fact {
         label: "Noyau",
@@ -35,8 +37,10 @@ pub const FACTS: &[Fact] = &[
     },
     Fact {
         label: "Nom de code",
-        value: "SuperContra",
-        note: Some("Déduit du nom de la branche du noyau ; Nothing ne l'a pas confirmé."),
+        value: "SuperContra (modèle A009P)",
+        note: Some(
+            "Le nom des mises à jour officielles de Nothing OS, par exemple SuperContra-B4.1-261111-1740.",
+        ),
     },
     Fact {
         label: "Bootloader",
@@ -153,6 +157,11 @@ pub const ROADMAP: &[Step] = &[
         status: Status::Done,
     },
     Step {
+        title: "Écrire le guide",
+        detail: "Toutes les étapes, de la sauvegarde à l'installation, avec leurs commandes et leurs sources.",
+        status: Status::Done,
+    },
+    Step {
         title: "Déverrouiller le bootloader",
         detail: "Sans cela, rien ne peut être installé. L'opération efface le téléphone.",
         status: Status::Next,
@@ -213,6 +222,10 @@ pub const REFERENCES: &[Reference] = &[
     Reference {
         title: "Android Central : le Phone (4b) et ses mises à jour",
         url: "https://www.androidcentral.com/phones/nothing-phones/the-nothing-phone-4b-is-a-flashy-budget-phone-with-flagship-software-promises",
+    },
+    Reference {
+        title: "Nothing Archive : appareils et firmware Nothing",
+        url: "https://github.com/spike0en/nothing_archive/blob/main/website/docs/devices.md",
     },
     Reference {
         title: "Google : Rust dans Android",

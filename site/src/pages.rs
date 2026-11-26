@@ -22,12 +22,12 @@ fn base() -> &'static str {
 }
 
 /// Un lien interne : `link("/site.css")` donne `/customFirmware/site.css` sur GitHub Pages.
-fn link(path: &str) -> String {
+pub fn link(path: &str) -> String {
     format!("{}{path}", base())
 }
 
 /// L'icône et la feuille de style, communes aux deux pages.
-fn assets(page: Page) -> Page {
+pub fn assets(page: Page) -> Page {
     page.head(format!(
         r#"<link rel="icon" href="{}"/>"#,
         link("/favicon.svg")
@@ -89,7 +89,7 @@ pub async fn not_found(_req: Request) -> Page {
         .body(site_footer())
 }
 
-fn site_header() -> Element {
+pub fn site_header() -> Element {
     header()
         .child(
             a().class("brand")
@@ -106,7 +106,12 @@ fn site_header() -> Element {
                     a().href(link("/#feuille-de-route"))
                         .text("Feuille de route"),
                 )
-                .child(a().href(link("/#sources")).text("Sources")),
+                .child(a().href(link("/#sources")).text("Sources"))
+                .child(
+                    a().class("nav-guide")
+                        .href(crate::guide_page::href())
+                        .text("Guide"),
+                ),
         )
 }
 
@@ -149,7 +154,8 @@ fn intro() -> Element {
                     div()
                         .class("row")
                         .style("--i:4")
-                        .child(a().class("button").href("#feuille-de-route").text("Voir la feuille de route"))
+                        .child(a().class("button").href(crate::guide_page::href()).text("Lire le guide"))
+                        .child(a().class("button ghost").href("#feuille-de-route").text("Feuille de route"))
                         .child(a().class("button ghost").href(REPOSITORY).text("Code source")),
                 ),
         )
@@ -281,7 +287,7 @@ fn references() -> Element {
         })))
 }
 
-fn site_footer() -> Element {
+pub fn site_footer() -> Element {
     footer()
         .child(
             span()
