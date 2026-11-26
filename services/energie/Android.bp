@@ -1,0 +1,10 @@
+// energie : règle le noyau pour économiser la batterie (voir README.md).
+// Le même code se compile avec Cargo pour les tests.
+
+rust_binary {
+    name: "customfirmware-energie",
+    crate_name: "energie",
+    srcs: ["src/main.rs"],
+    edition: "2021",
+    system_ext_specific: true,
+}

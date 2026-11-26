@@ -1,0 +1,10 @@
+[package]
+name = "energie"
+version = "0.1.0"
+edition = "2021"
+publish = false
+description = "Règle le noyau du téléphone pour économiser la batterie, et mesure ce que chaque réglage rapporte."
+
+# Aucune dépendance, comme `cf` : la bibliothèque standard suffit. AOSP compile le même
+# code (voir Android.bp).
+[dependencies]

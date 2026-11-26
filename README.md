@@ -16,6 +16,7 @@ Il se place tel quel dans un arbre AOSP, dans `vendor/customfirmware`
 | Dossier | Contenu | État |
 |---|---|---|
 | [`tools/`](tools) | `cf`, l'outil du projet, en Rust : vérifie l'ordinateur, lit les faits du téléphone, extrait les fichiers propriétaires | écrit et testé |
+| [`services/energie/`](services/energie) | `energie`, en Rust : règle le noyau pour économiser la batterie (profils, règles écran/charge, journal de consommation) | écrit et testé, pas encore essayé sur le téléphone |
 | [`services/hello/`](services/hello) | le premier service Binder en Rust (interface AIDL + service) | écrit, pas encore compilé dans AOSP |
 | [`products/`](products) | `customfirmware_arm64` : l'image système générique d'AOSP plus les services du projet | écrit, pas encore compilé |
 | [`device/SuperContra/`](device/SuperContra) | la configuration propre au Phone (4b), pour l'étape 2 | squelette |

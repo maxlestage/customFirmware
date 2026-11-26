@@ -1,0 +1,5 @@
+# Pour le téléphone : un binaire statique ARM 64 bits, sans le NDK d'Android.
+#   rustup target add aarch64-unknown-linux-musl
+#   cargo build --release -p energie --target aarch64-unknown-linux-musl
+[target.aarch64-unknown-linux-musl]
+linker = "rust-lld"
