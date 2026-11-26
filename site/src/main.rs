@@ -5,6 +5,8 @@
 
 mod art;
 mod content;
+mod guide;
+mod guide_page;
 mod pages;
 
 use std::io;
@@ -15,6 +17,9 @@ use paquets::prelude::*;
 fn app() -> App {
     let mut app = App::new();
     app.get("/", pages::home);
+    // « /guide » et « /guide/ » sont la même route pour Paquets ; les liens visent
+    // « /guide/ », que GitHub Pages sert depuis guide/index.html.
+    app.get("/guide", guide_page::guide);
     app.health("/health"); // pour les sondes de disponibilité
     app.get("/*", pages::not_found);
     app
@@ -49,7 +54,11 @@ async fn export(out: &Path) -> io::Result<usize> {
     std::fs::create_dir_all(out)?;
 
     let mut written = 0;
-    for (path, file, status) in [("/", "index.html", 200), ("/404", "404.html", 404)] {
+    for (path, file, status) in [
+        ("/", "index.html", 200),
+        ("/guide/", "guide/index.html", 200),
+        ("/404", "404.html", 404),
+    ] {
         let res = client.get(path).await;
         if res.status().as_u16() != status {
             return Err(io::Error::other(format!(
@@ -57,7 +66,11 @@ async fn export(out: &Path) -> io::Result<usize> {
                 res.status()
             )));
         }
-        std::fs::write(out.join(file), res.text())?;
+        let file = out.join(file);
+        if let Some(parent) = file.parent() {
+            std::fs::create_dir_all(parent)?;
+        }
+        std::fs::write(file, res.text())?;
         written += 1;
     }
     for entry in std::fs::read_dir("public")? {
@@ -131,6 +144,8 @@ mod tests {
     async fn health_and_unknown_pages() {
         let client = app().test().await;
         assert_eq!(client.get("/health").await.status(), 200);
+        assert_eq!(client.get("/guide/").await.status(), 200);
+        assert_eq!(client.get("/guide").await.status(), 200);
         assert_eq!(client.get("/nope").await.status(), 404);
     }
 }

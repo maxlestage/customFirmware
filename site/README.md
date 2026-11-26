@@ -12,7 +12,9 @@ cargo test
 | Fichier | Contenu |
 |---|---|
 | `src/content.rs` | les textes et les données : l'appareil, le périmètre Rust, la feuille de route, les sources |
+| `src/guide.rs` | le guide pas à pas : chaque étape, ses commandes, ses vérifications et ses sources |
 | `src/pages.rs` | les vues : la page d'accueil et la page 404 |
+| `src/guide_page.rs` | la vue du guide (`/guide/`) |
 | `src/main.rs` | les routes et les tests |
 | `public/site.css` | les styles, par-dessus le thème de Paquets |
 
