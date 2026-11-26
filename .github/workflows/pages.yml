@@ -1,0 +1,44 @@
+# Publie le site sur GitHub Pages : l'export statique de master, poussé sur la
+# branche gh-pages. Adresse : https://maxlestage.github.io/customFirmware/
+# Une seule fois, dans GitHub : Settings → Pages → Source « Deploy from a branch »,
+# branche gh-pages, dossier / (si Pages ne s'est pas activé seul).
+
+name: GitHub Pages
+
+on:
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    name: Publier
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: master
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - name: Export statique
+        working-directory: site
+        run: SITE_BASE=/customFirmware cargo run --release -- export ../dist
+      - name: Pousser sur gh-pages
+        working-directory: dist
+        env:
+          SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          git init -q -b gh-pages
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -q -m "Site de master ($SHA)"
+          git push -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" gh-pages
+          echo "### 🌐 https://maxlestage.github.io/customFirmware/" >> "$GITHUB_STEP_SUMMARY"

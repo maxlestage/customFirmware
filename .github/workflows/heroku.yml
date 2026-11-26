@@ -1,0 +1,57 @@
+# Déploie master sur Heroku par la Platform API (buildpack emk/rust, pile heroku-26).
+# Heroku télécharge lui-même l'archive du commit sur GitHub (le dépôt est public).
+#
+# Réglage, une seule fois (GitHub → Settings → Secrets and variables → Actions) :
+#   - secret     HEROKU_API_KEY    Heroku → Account settings → API Key
+#   - variable   HEROKU_APP_NAME   facultative, customfirmware par défaut
+# Sans le secret, le déploiement est sauté.
+
+name: Heroku
+
+on:
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+concurrency:
+  group: heroku
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Déployer
+    runs-on: ubuntu-latest
+    env:
+      HEROKU_API_KEY: ${{ secrets.HEROKU_API_KEY }}
+      APP: ${{ vars.HEROKU_APP_NAME || 'customfirmware' }}
+    steps:
+      - name: Construire et publier sur Heroku
+        env:
+          TARBALL: https://github.com/${{ github.repository }}/archive/${{ github.sha }}.tar.gz
+        run: |
+          set -euo pipefail
+          if [ -z "${HEROKU_API_KEY:-}" ]; then
+            echo "::notice::Heroku n'est pas configuré : ajoutez le secret HEROKU_API_KEY (Settings → Secrets and variables → Actions)."
+            exit 0
+          fi
+          api() {
+            curl -fsS -H "Accept: application/vnd.heroku+json; version=3" \
+              -H "Authorization: Bearer $HEROKU_API_KEY" \
+              -H "Content-Type: application/json" "$@"
+          }
+          build=$(api -X POST "https://api.heroku.com/apps/$APP/builds" \
+            -d "{\"buildpacks\":[{\"url\":\"emk/rust\"}],\"source_blob\":{\"url\":\"$TARBALL\",\"version\":\"$GITHUB_SHA\"}}")
+          id=$(jq -r '.id' <<< "$build")
+          curl -sSN "$(jq -r '.output_stream_url' <<< "$build")" || true
+          result=pending
+          for _ in $(seq 1 240); do
+            result=$(api "https://api.heroku.com/apps/$APP/builds/$id" | jq -r '.status')
+            [ "$result" != "pending" ] && break
+            sleep 5
+          done
+          if [ "$result" != "succeeded" ]; then
+            echo "::error::La construction Heroku a fini avec le statut « $result »."
+            exit 1
+          fi
+          url=$(api "https://api.heroku.com/apps/$APP" | jq -r '.web_url')
+          echo "### 🚀 $url" >> "$GITHUB_STEP_SUMMARY"

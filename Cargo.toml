@@ -1,0 +1,10 @@
+# L'espace de travail du dépôt. Heroku (buildpack emk/rust) compile à la racine :
+# `cargo build --release` y produit target/release/custom-firmware-site.
+[workspace]
+members = ["site"]
+resolver = "3"
+
+[profile.release]
+lto = "thin"
+codegen-units = 1
+strip = true

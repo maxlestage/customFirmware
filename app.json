@@ -1,0 +1,9 @@
+{
+  "name": "customFirmware",
+  "description": "Le site de présentation de customFirmware : AOSP et Rust sur le Nothing Phone (4b).",
+  "repository": "https://github.com/maxlestage/customFirmware",
+  "keywords": ["rust", "paquets", "aosp", "android"],
+  "stack": "heroku-26",
+  "buildpacks": [{ "url": "emk/rust" }],
+  "success_url": "/"
+}
