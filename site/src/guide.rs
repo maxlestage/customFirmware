@@ -7,7 +7,7 @@
 /// Date de la dernière vérification des commandes.
 pub const GUIDE_UPDATED: &str = "26 novembre 2026";
 
-pub const INTRO: &str = "Ce guide décrit, dans l'ordre, tout le chemin entre un Nothing Phone (4b) d'origine et un système AOSP compilé par vous, avec des services écrits en Rust. Il avance en deux temps : d'abord un système AOSP qui garde le noyau et les pilotes d'origine (étapes 05 à 08), puis le remplacement de ces pilotes (étapes 09 à 11). Chaque étape dit d'où viennent ses commandes et si elles ont déjà été essayées.";
+pub const INTRO: &str = "Ce guide décrit, dans l'ordre, tout le chemin entre un Nothing Phone (4b) d'origine et un système AOSP compilé par vous, avec des services écrits en Rust. Il avance en deux temps : d'abord un système AOSP qui garde le noyau et les pilotes d'origine (étapes 05 à 08), puis le remplacement de ces pilotes (étapes 09 à 11). Chaque étape dit d'où viennent ses commandes et si elles ont déjà été essayées. Les commandes dépendent de votre ordinateur : choisissez son système ci-dessous.";
 
 /// Ce que l'on sait d'une étape.
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -66,8 +66,60 @@ impl Verified {
     }
 }
 
+/// Le système de l'ordinateur. Chaque système a sa page du guide (`/guide/<slug>/`),
+/// avec ses commandes ; `/guide/` est celle d'Ubuntu, la distribution que la
+/// documentation d'AOSP prend pour exemple.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum Os {
+    Ubuntu,
+    Fedora,
+    Arch,
+    Macos,
+}
+
+/// Les distributions Linux : AOSP ne se compile que sur Linux.
+pub const LINUX: &[Os] = &[Os::Ubuntu, Os::Fedora, Os::Arch];
+
+impl Os {
+    pub const ALL: [Os; 4] = [Os::Ubuntu, Os::Fedora, Os::Arch, Os::Macos];
+
+    pub fn slug(self) -> &'static str {
+        match self {
+            Os::Ubuntu => "ubuntu",
+            Os::Fedora => "fedora",
+            Os::Arch => "arch",
+            Os::Macos => "macos",
+        }
+    }
+
+    pub fn from_slug(slug: &str) -> Option<Os> {
+        Os::ALL.into_iter().find(|os| os.slug() == slug)
+    }
+
+    pub fn label(self) -> &'static str {
+        match self {
+            Os::Ubuntu => "Ubuntu, Debian",
+            Os::Fedora => "Fedora",
+            Os::Arch => "Arch Linux",
+            Os::Macos => "macOS",
+        }
+    }
+
+    /// Les systèmes qui suivent la même page.
+    pub fn family(self) -> &'static str {
+        match self {
+            Os::Ubuntu => "et dérivées : Linux Mint, Pop!_OS, elementary…",
+            Os::Fedora => "et dérivées : Nobara, Ultramarine…",
+            Os::Arch => "et dérivées : Manjaro, EndeavourOS…",
+            Os::Macos => "puce Apple ou Intel, avec Homebrew",
+        }
+    }
+}
+
 /// Un morceau d'étape.
 pub enum Block {
+    /// Des blocs qui ne s'affichent que pour certains systèmes.
+    For(&'static [Os], &'static [Block]),
     Text(&'static str),
     /// Une liste à puces.
     List(&'static [&'static str]),
@@ -105,6 +157,7 @@ pub struct Step {
 }
 
 use Block::*;
+use Os::*;
 
 pub const STEPS: &[Step] = &[
     Step {
@@ -121,8 +174,14 @@ pub const STEPS: &[Step] = &[
                 "Un Nothing Phone (4b), modèle A009P, nom de code SuperContra.",
                 "Un câble USB-C qui transporte les données, pas seulement la charge.",
                 "Un ordinateur avec un port USB, pour parler au téléphone : n'importe quel ordinateur suffit jusqu'à l'étape 05.",
-                "Pour compiler AOSP (à partir de l'étape 06) : un ordinateur Linux 64 bits x86, avec au moins 64 Go de mémoire et 400 Go d'espace libre (250 Go pour les sources, 150 Go pour la compilation). Un serveur loué à l'heure convient.",
+                "Pour compiler AOSP (à partir de l'étape 06) : un ordinateur Linux 64 bits x86, n'importe quelle distribution, avec au moins 64 Go de mémoire et 400 Go d'espace libre (250 Go pour les sources, 150 Go pour la compilation). Un serveur loué à l'heure convient.",
             ]),
+            For(
+                &[Macos],
+                &[Warning(
+                    "Un Mac suffit jusqu'à l'étape 05 : parler au téléphone, sauvegarder, déverrouiller, installer une image générique. Mais AOSP ne se compile plus sur macOS depuis le 22 juin 2021 (Android 11), ni sur un processeur ARM, même dans une machine virtuelle Linux sur un Mac à puce Apple. À partir de l'étape 06, il faut un ordinateur ou un serveur Linux x86 64 bits ; choisissez alors sa distribution en haut de la page.",
+                )],
+            ),
             Warning(
                 "Déverrouiller le bootloader efface toutes les données du téléphone et peut annuler la garantie. Sur les puces Qualcomm, le niveau de protection Widevine passe de L1 à L3 (vidéo en définition réduite dans certaines applications), et les applications qui vérifient l'intégrité de l'appareil (banques, paiement) peuvent refuser de fonctionner.",
             ),
@@ -143,48 +202,191 @@ pub const STEPS: &[Step] = &[
         verified: Verified::Yes,
         blocks: &[
             Text(
-                "Les commandes sont pour Ubuntu (18.04 ou plus récent), la distribution que la documentation d'AOSP prend pour exemple.",
+                "Les commandes de cette étape dépendent du système : choisissez le vôtre en haut de la page. Celles des autres étapes sont les mêmes partout.",
             ),
-            Code {
-                title: "adb et fastboot (platform-tools de Google)",
-                code: r#"
+            For(
+                &[Ubuntu],
+                &[Code {
+                    title: "Les outils de base",
+                    code: r#"
+sudo apt-get update
+sudo apt-get install build-essential git curl unzip
+"#,
+                }],
+            ),
+            For(
+                &[Fedora],
+                &[Code {
+                    title: "Les outils de base",
+                    code: r#"
+sudo dnf install gcc make git curl unzip
+"#,
+                }],
+            ),
+            For(
+                &[Arch],
+                &[Code {
+                    title: "Les outils de base",
+                    code: r#"
+sudo pacman -Syu --needed base-devel git curl unzip
+"#,
+                }],
+            ),
+            For(
+                &[Macos],
+                &[
+                    Code {
+                        title: "Les outils de base : ceux d'Apple, puis Homebrew",
+                        code: r#"
+xcode-select --install        # le compilateur et git, dans une fenêtre d'Apple
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+"#,
+                    },
+                    Tip(
+                        "À la fin, l'installateur de Homebrew affiche deux lignes à copier pour l'ajouter au PATH : sur un Mac à puce Apple, il s'installe dans /opt/homebrew.",
+                    ),
+                ],
+            ),
+            For(
+                LINUX,
+                &[Code {
+                    title: "adb et fastboot (platform-tools de Google)",
+                    code: r#"
 curl -LO https://dl.google.com/android/repository/platform-tools-latest-linux.zip
 unzip platform-tools-latest-linux.zip -d ~
-echo 'export PATH="$HOME/platform-tools:$PATH"' >> ~/.bashrc
+echo 'export PATH="$HOME/platform-tools:$PATH"' >> ~/.bashrc    # ~/.zshrc avec zsh
 source ~/.bashrc
 adb --version && fastboot --version
 "#,
-            },
+                }],
+            ),
+            For(
+                &[Macos],
+                &[Code {
+                    title: "adb et fastboot (platform-tools de Google, par Homebrew)",
+                    code: r#"
+brew install --cask android-platform-tools
+adb --version && fastboot --version
+"#,
+                }],
+            ),
             Code {
                 title: "Rust, puis cf, l'outil du projet",
                 code: r#"
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+source ~/.cargo/env
 git clone https://github.com/maxlestage/customFirmware.git ~/customFirmware
 cargo install --path ~/customFirmware/tools
 cf doctor ~          # vérifie le système, la mémoire, le disque et les outils
 "#,
             },
-            Code {
-                title: "Pour compiler AOSP : ses paquets et repo",
-                code: r#"
-sudo apt-get update
+            For(
+                &[Ubuntu],
+                &[Code {
+                    title: "Pour compiler AOSP : ses paquets et repo (liste officielle)",
+                    code: r#"
 sudo apt-get install git-core gnupg flex bison build-essential zip curl \
   zlib1g-dev libc6-dev-i386 x11proto-core-dev libx11-dev lib32z1-dev \
   libgl1-mesa-dev libxml2-utils xsltproc unzip fontconfig
 sudo apt-get install repo
 repo version        # 2.4 ou plus récent
 "#,
-            },
-            Check(
-                "cf doctor affiche une coche devant chaque ligne. Sans les 64 Go de mémoire et les 400 Go de disque, vous pouvez quand même suivre le guide jusqu'à l'étape 05.",
+                }],
             ),
-            Tip(
-                "Si adb ne voit pas le téléphone sans sudo, installez les règles udev d'Android : sudo apt-get install android-sdk-platform-tools-common, puis débranchez et rebranchez le câble.",
+            For(
+                &[Fedora],
+                &[Code {
+                    title: "Pour compiler AOSP : ses paquets et repo",
+                    code: r#"
+sudo dnf install git gnupg2 flex bison gcc gcc-c++ make zip unzip curl \
+  zlib-ng-compat-devel zlib-ng-compat-devel.i686 glibc-devel.i686 \
+  xorg-x11-proto-devel libX11-devel mesa-libGL-devel libxml2 libxslt \
+  fontconfig python3 repo
+repo version        # 2.4 ou plus récent
+"#,
+                }],
+            ),
+            For(
+                &[Arch],
+                &[
+                    Code {
+                        title: "Pour compiler AOSP : ses paquets et repo",
+                        code: r#"
+sudo pacman -S --needed base-devel git gnupg flex bison zip unzip curl \
+  zlib libx11 mesa libxml2 libxslt fontconfig python repo lib32-glibc
+sudo pacman -S --needed lib32-zlib      # dépôt [multilib], voir ci-dessous
+repo version        # 2.4 ou plus récent
+"#,
+                    },
+                    Tip(
+                        "lib32-zlib est dans le dépôt [multilib], désactivé par défaut : décommentez les deux lignes [multilib] de /etc/pacman.conf, puis sudo pacman -Syu.",
+                    ),
+                ],
+            ),
+            For(
+                &[Fedora, Arch],
+                &[Text(
+                    "La documentation d'AOSP ne donne la liste des paquets que pour Ubuntu. Celle-ci en est l'équivalent pour cette distribution, paquet par paquet ; si la compilation réclame un outil, c'est le nom du paquet qui a changé.",
+                )],
+            ),
+            For(
+                &[Macos],
+                &[Text(
+                    "Les paquets d'AOSP s'installent sur l'ordinateur Linux qui compilera, à l'étape 06 : ouvrez alors la page de sa distribution, à cette étape.",
+                )],
+            ),
+            Check(
+                "cf doctor affiche une coche devant chaque ligne. Sans les 64 Go de mémoire et les 400 Go de disque, ou sur un Mac, vous pouvez quand même suivre le guide jusqu'à l'étape 05.",
+            ),
+            For(
+                &[Ubuntu],
+                &[Tip(
+                    "Si adb ne voit pas le téléphone sans sudo, installez les règles udev d'Android : sudo apt-get install android-sdk-platform-tools-common, puis débranchez et rebranchez le câble.",
+                )],
+            ),
+            For(
+                &[Arch],
+                &[Tip(
+                    "Si adb ne voit pas le téléphone sans sudo, installez les règles udev d'Android : sudo pacman -S android-udev, puis débranchez et rebranchez le câble.",
+                )],
+            ),
+            For(
+                &[Fedora],
+                &[
+                    Text(
+                        "Si adb ne voit pas le téléphone sans sudo, Fedora n'a pas de paquet de règles udev pour Android : cette règle donne l'accès à l'utilisateur connecté, pour tout appareil en mode adb ou fastboot.",
+                    ),
+                    Code {
+                        title: "Une règle udev pour adb et fastboot",
+                        code: r#"
+echo 'SUBSYSTEM=="usb", ENV{DEVTYPE}=="usb_device", ENV{ID_USB_INTERFACES}=="*:ff420[13]:*", TAG+="uaccess"' \
+  | sudo tee /etc/udev/rules.d/51-android.rules
+sudo udevadm control --reload-rules    # puis débrancher et rebrancher le câble
+"#,
+                    },
+                ],
+            ),
+            For(
+                &[Macos],
+                &[Tip(
+                    "macOS n'a besoin d'aucun pilote : si adb ne voit pas le téléphone, essayez un autre câble, ou un port USB de l'ordinateur plutôt qu'un concentrateur.",
+                )],
             ),
             Source {
                 title: "AOSP : télécharger les sources (installation de repo)",
                 url: "https://source.android.com/docs/setup/download",
             },
+            Source {
+                title: "AOSP : configuration requise (Linux, et fin de macOS)",
+                url: "https://source.android.com/docs/setup/start/requirements",
+            },
+            For(
+                &[Macos],
+                &[Source {
+                    title: "Homebrew : android-platform-tools",
+                    url: "https://formulae.brew.sh/cask/android-platform-tools",
+                }],
+            ),
         ],
     },
     Step {
@@ -236,16 +438,58 @@ cf props getprop.txt
             Text(
                 "Nothing ne publie pas d'images d'usine. Le projet communautaire Nothing Archive conserve les mises à jour officielles du Phone (4b), déjà découpées en images : image-boot.7z, image-firmware.7z, image-logical.7z.001, .002… et un fichier d'empreintes -hash.sha256.",
             ),
-            Code {
-                title: "Décompresser et vérifier les images",
-                code: r#"
+            For(
+                &[Ubuntu],
+                &[Code {
+                    title: "Décompresser et vérifier les images",
+                    code: r#"
 sudo apt-get install p7zip-full
 cd ~/supercontra/stock          # le dossier où vous avez mis les fichiers .7z
-sha256sum -c *-hash.sha256      # si le fichier d'empreintes est fourni
-7za -y x "*.7z*"
+sha256sum -c      *-hash.sha256  # si le fichier d'empreintes est fourni
+7z x -y "*.7z*"
 ls *.img
 "#,
-            },
+                }],
+            ),
+            For(
+                &[Fedora],
+                &[Code {
+                    title: "Décompresser et vérifier les images",
+                    code: r#"
+sudo dnf install 7zip
+cd ~/supercontra/stock          # le dossier où vous avez mis les fichiers .7z
+sha256sum -c      *-hash.sha256  # si le fichier d'empreintes est fourni
+7z x -y "*.7z*"
+ls *.img
+"#,
+                }],
+            ),
+            For(
+                &[Arch],
+                &[Code {
+                    title: "Décompresser et vérifier les images",
+                    code: r#"
+sudo pacman -S --needed 7zip
+cd ~/supercontra/stock          # le dossier où vous avez mis les fichiers .7z
+sha256sum -c      *-hash.sha256  # si le fichier d'empreintes est fourni
+7z x -y "*.7z*"
+ls *.img
+"#,
+                }],
+            ),
+            For(
+                &[Macos],
+                &[Code {
+                    title: "Décompresser et vérifier les images",
+                    code: r#"
+brew install sevenzip            # la commande s'appelle 7zz
+cd ~/supercontra/stock          # le dossier où vous avez mis les fichiers .7z
+shasum -a 256 -c  *-hash.sha256  # si le fichier d'empreintes est fourni
+7zz x -y "*.7z*"
+ls *.img
+"#,
+                }],
+            ),
             Code {
                 title: "Si vous n'avez qu'une mise à jour complète (fichier OTA .zip)",
                 code: r#"
@@ -368,6 +612,12 @@ fastboot reboot
         time: "1 à 3 heures",
         verified: Verified::Yes,
         blocks: &[
+            For(
+                &[Macos],
+                &[Warning(
+                    "À partir d'ici, les commandes se tapent sur l'ordinateur Linux qui compilera AOSP, pas sur le Mac. Installez-y d'abord les paquets de l'étape 01, en choisissant sa distribution en haut de la page. Le téléphone peut rester branché au Mac : seules les images compilées (system.img…) sont à y copier.",
+                )],
+            ),
             Code {
                 title: "Initialiser AOSP",
                 code: r#"
@@ -699,6 +949,28 @@ mod tests {
                 .iter()
                 .any(|b| matches!(b, Block::Source { .. }));
             assert!(cited, "{}", step.id);
+        }
+    }
+
+    #[test]
+    fn os_slugs_round_trip() {
+        for os in Os::ALL {
+            assert_eq!(Os::from_slug(os.slug()), Some(os));
+        }
+        assert_eq!(Os::from_slug("windows"), None);
+    }
+
+    /// À l'étape 01, chaque système a au moins deux blocs de commandes à lui.
+    #[test]
+    fn every_system_has_its_own_setup_commands() {
+        let ordinateur = STEPS.iter().find(|s| s.id == "ordinateur").unwrap();
+        for os in Os::ALL {
+            let codes = ordinateur
+                .blocks
+                .iter()
+                .filter(|b| matches!(b, Block::For(list, inner) if list.contains(&os) && inner.iter().any(|b| matches!(b, Block::Code { .. }))))
+                .count();
+            assert!(codes >= 2, "{os:?}");
         }
     }
 

@@ -26,7 +26,7 @@ cf, les outils de customFirmware
 
 Usage :
   cf doctor [dossier]
-      Vérifie l'ordinateur : système, mémoire, espace libre dans le dossier où
+      Vérifie l'ordinateur (Linux ou macOS) : système, mémoire, espace libre dans le dossier où
       AOSP sera téléchargé (le dossier courant par défaut), outils installés.
 
   cf props <getprop.txt> [--mk <fichier.mk>]
@@ -107,7 +107,8 @@ impl Parsed {
 fn cmd_doctor(args: &[String]) -> Result<bool, String> {
     let parsed = Parsed::new(args, &[])?;
     let dir = parsed.positional.first().map_or(".", String::as_str);
-    let checks = doctor::run(Path::new(dir));
+    let (family, name) = doctor::this_system();
+    let checks = doctor::run(Path::new(dir), family, &name);
     let mut ok = true;
     for check in &checks {
         let mark = match check.level {
@@ -125,6 +126,7 @@ fn cmd_doctor(args: &[String]) -> Result<bool, String> {
     } else {
         "\nIl manque des éléments : voir les lignes marquées ✗."
     });
+    out(format!("Le guide pour ce système : {}", family.guide()));
     Ok(ok)
 }
 

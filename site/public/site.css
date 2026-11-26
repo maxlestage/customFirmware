@@ -452,6 +452,37 @@ html body .button:active, .toc a:active, html body > header nav a:active { trans
 .badge.untested { color: var(--tip); }
 .badge.no { color: var(--muted); border-style: dashed; }
 
+/* Choix du système : une page par système, deux colonnes sur téléphone, quatre ensuite */
+.os-picker { margin: 1.6rem 0; scroll-margin-top: 1rem; }
+.os-picker-title { font: 600 .72rem var(--mono); text-transform: uppercase; letter-spacing: .12em; color: var(--muted); margin: 0 0 .6rem; }
+.os-picker ul { list-style: none; padding: 0; margin: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .5rem; }
+@media (min-width: 46rem) { .os-picker ul { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+.os-picker a {
+  display: grid; gap: .2rem; align-content: start; height: 100%; box-sizing: border-box;
+  min-height: 3rem; padding: .7rem .8rem;
+  border: 1px solid var(--line); border-radius: var(--radius); background: var(--card);
+  color: var(--fg); text-decoration: none; font-weight: 400;
+  transition: border-color .2s, background .2s, transform .2s;
+}
+.os-picker a strong { font-size: .98em; }
+.os-picker a span { font-size: .78em; color: var(--muted); line-height: 1.35; }
+.os-picker a[aria-current="page"] {
+  border-color: var(--accent); border-width: 2px; padding: calc(.7rem - 1px) calc(.8rem - 1px);
+  background: color-mix(in srgb, var(--accent) 9%, var(--card));
+}
+.os-picker a[aria-current="page"] strong { color: var(--accent); }
+@media (hover: hover) {
+  .os-picker a:hover { border-color: var(--accent); transform: translateY(-2px); }
+}
+.os-picker-note { font-size: .85rem; margin: .7rem 0 0; }
+.toc-os {
+  display: grid; gap: .15rem; margin-bottom: 1.2rem; padding: .55rem .7rem;
+  border: 1px solid var(--line); border-radius: 8px;
+  color: var(--fg); text-decoration: none; font-weight: 600;
+}
+.toc-os .toc-title { margin: 0; }
+@media (hover: hover) { .toc-os:hover { border-color: var(--accent); color: var(--accent); } }
+
 /* Sommaire : un menu dépliant sur téléphone, une colonne collante sur grand écran */
 .guide-layout { display: grid; grid-template-columns: minmax(0, 1fr); gap: 1.5rem; margin-top: 1.5rem; }
 details.toc-mobile { border: 1px solid var(--line); border-radius: var(--radius); background: var(--card); }

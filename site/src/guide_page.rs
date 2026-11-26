@@ -3,11 +3,39 @@
 
 use paquets::prelude::*;
 
-use crate::guide::{Block, GUIDE_UPDATED, INTRO, STEPS, Step, Verified};
+use crate::guide::{Block, GUIDE_UPDATED, INTRO, Os, STEPS, Step, Verified};
 use crate::pages::{assets, link, site_footer, site_header};
 
+/// `/guide/` : la page d'Ubuntu.
 pub async fn guide(_req: Request) -> Page {
-    assets(Page::new("Guide : AOSP et Rust sur le Nothing Phone (4b) · customFirmware"))
+    page(Os::Ubuntu)
+}
+
+/// `/guide/<système>/` : la page d'un autre système, ou 404.
+pub async fn guide_for(req: Request) -> Page {
+    match req.param("systeme").and_then(Os::from_slug) {
+        Some(os) => page(os),
+        None => crate::pages::not_found(req).await,
+    }
+}
+
+/// L'adresse de la page d'un système.
+pub fn path(os: Os) -> String {
+    match os {
+        Os::Ubuntu => "/guide/".into(),
+        os => format!("/guide/{}/", os.slug()),
+    }
+}
+
+fn page(os: Os) -> Page {
+    let title = match os {
+        Os::Ubuntu => "Guide : AOSP et Rust sur le Nothing Phone (4b) · customFirmware".into(),
+        os => format!(
+            "Guide pour {} : AOSP et Rust sur le Nothing Phone (4b) · customFirmware",
+            os.label()
+        ),
+    };
+    assets(Page::new(title))
         .lang("fr")
         .description(
             "Le guide pas à pas du projet customFirmware : sauvegarder, déverrouiller, extraire, compiler AOSP, écrire un HAL en Rust et installer sur le Nothing Phone (4b).",
@@ -15,18 +43,22 @@ pub async fn guide(_req: Request) -> Page {
         .body(div().class("scroll-progress").attr("aria-hidden", "true"))
         .body(site_header())
         .body(
-            main().class("guide").child(guide_intro()).child(
+            main().class("guide").child(guide_intro(os)).child(
                 div()
                     .class("guide-layout")
                     .child(toc_mobile())
-                    .child(toc())
-                    .child(div().class("guide-steps").children(STEPS.iter().enumerate().map(step))),
+                    .child(toc(os))
+                    .child(
+                        div()
+                            .class("guide-steps")
+                            .children(STEPS.iter().enumerate().map(|s| step(s, os))),
+                    ),
             ),
         )
         .body(site_footer())
 }
 
-fn guide_intro() -> Element {
+fn guide_intro(os: Os) -> Element {
     section()
         .class("guide-intro")
         .child(p().class("eyebrow").style("--i:0").text("Guide pas à pas"))
@@ -36,9 +68,10 @@ fn guide_intro() -> Element {
             ),
         )
         .child(p().class("lead").style("--i:2").text(INTRO))
+        .child(os_picker(os))
         .child(
             ul().class("legend")
-                .style("--i:3")
+                .style("--i:4")
                 .children(Verified::ALL.map(|v| {
                     li().child(span().class(v.class()).text(v.label()))
                         .child(span().text(v.meaning()))
@@ -46,9 +79,35 @@ fn guide_intro() -> Element {
         )
         .child(
             p().class("muted")
-                .style("--i:4")
+                .style("--i:5")
                 .text(format!("Mis à jour le {GUIDE_UPDATED}.")),
         )
+}
+
+/// Le choix du système : un lien par page, sans JavaScript. La page choisie se garde
+/// dans les favoris.
+fn os_picker(current: Os) -> Element {
+    nav()
+        .class("os-picker")
+        .id("systeme")
+        .style("--i:3")
+        .attr("aria-label", "Système de votre ordinateur")
+        .child(p().class("os-picker-title").text("Votre ordinateur"))
+        .child(ul().children(Os::ALL.map(|os| {
+            let lien = a()
+                // L'ancre garde le lecteur au sélecteur après le changement de page.
+                .href(format!("{}#systeme", link(&path(os))))
+                .child(strong().text(os.label()))
+                .child(span().text(os.family()));
+            li().child(if os == current {
+                lien.attr("aria-current", "page")
+            } else {
+                lien
+            })
+        })))
+        .child(p().class("muted os-picker-note").text(
+            "Une autre distribution : partez de celle dont elle dérive ; seuls les noms des paquets changent. Windows : installez Ubuntu dans WSL 2, puis suivez la page d'Ubuntu.",
+        ))
 }
 
 /// La liste des étapes, avec leur numéro.
@@ -72,15 +131,21 @@ fn toc_mobile() -> Element {
 }
 
 /// Le sommaire sur grand écran : une colonne qui reste visible.
-fn toc() -> Element {
+fn toc(os: Os) -> Element {
     nav()
         .class("toc")
         .attr("aria-label", "Étapes du guide")
+        .child(
+            a().class("toc-os")
+                .href("#systeme")
+                .child(span().class("toc-title").text("Système"))
+                .child(span().text(os.label())),
+        )
         .child(p().class("toc-title").text("Étapes"))
         .child(toc_list())
 }
 
-fn step((i, s): (usize, &Step)) -> Element {
+fn step((i, s): (usize, &Step), os: Os) -> Element {
     section()
         .class("guide-step")
         .id(s.id)
@@ -102,11 +167,24 @@ fn step((i, s): (usize, &Step)) -> Element {
                 ),
         )
         .child(p().class("step-goal").text(s.goal))
-        .children(s.blocks.iter().map(block))
+        .children(blocks(s.blocks, os))
+}
+
+/// Les blocs à afficher pour ce système : ceux des `For` qui ne le visent pas sont omis.
+fn blocks(list: &[Block], os: Os) -> Vec<Node> {
+    list.iter()
+        .flat_map(|b| match b {
+            Block::For(systems, inner) if systems.contains(&os) => blocks(inner, os),
+            Block::For(..) => Vec::new(),
+            b => vec![block(b)],
+        })
+        .collect()
 }
 
 fn block(b: &Block) -> Node {
     match b {
+        // Déjà déplié par `blocks`.
+        Block::For(..) => text(""),
         Block::Text(t) => p().text(*t).into(),
         Block::List(items) => ul()
             .class("guide-list")

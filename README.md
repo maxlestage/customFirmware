@@ -35,7 +35,7 @@ Le projet avance en deux temps :
 
 ```sh
 cargo install --path tools
-cf doctor ~                          # l'ordinateur peut-il compiler AOSP ?
+cf doctor ~                          # l'ordinateur peut-il compiler AOSP ? (Linux ou macOS)
 cf props getprop.txt                 # les faits du téléphone, depuis `adb shell getprop`
 cf blobs --list … --from … --out …   # copie les fichiers propriétaires de la liste
 ```
