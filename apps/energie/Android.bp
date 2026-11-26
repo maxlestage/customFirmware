@@ -1,0 +1,14 @@
+// Énergie : l'application qui choisit le profil du démon energie (voir README.md).
+
+android_app {
+    name: "CustomFirmwareEnergie",
+    srcs: ["src/**/*.kt"],
+    resource_dirs: ["res"],
+    manifest: "AndroidManifest.xml",
+    // uid system (android:sharedUserId) : il faut la signature de la plateforme.
+    certificate: "platform",
+    platform_apis: true,
+    system_ext_specific: true,
+    // Installée avec le démon qu'elle pilote.
+    required: ["customfirmware-energie"],
+}

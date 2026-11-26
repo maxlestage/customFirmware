@@ -95,6 +95,10 @@ pub const IN_RUST: &[Part] = &[
 
 pub const NOT_IN_RUST: &[Part] = &[
     Part {
+        title: "Les applications du projet",
+        detail: "En Kotlin : les tuiles et les écrans d'Android passent par ses API Java. Énergie, une tuile pour choisir le profil d'énergie, en est la première.",
+    },
+    Part {
         title: "Android (AOSP) lui-même",
         detail: "Des millions de lignes en C++, Java et Kotlin. Le projet les compile, il ne les réécrit pas.",
     },

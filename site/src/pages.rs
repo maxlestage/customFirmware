@@ -207,7 +207,7 @@ fn scope() -> Element {
         .id("rust")
         .child(heading("Ce qui est en Rust, et ce qui ne peut pas l'être"))
         .child(p().class("muted reveal").text(
-            "Un téléphone ne peut pas être réécrit entièrement en Rust. Le projet écrit en Rust tout ce qu'il ajoute et reprend le reste tel quel.",
+            "Un téléphone ne peut pas être réécrit entièrement en Rust. Le projet écrit en Rust tout ce qu'il ajoute sous l'interface (services, outils), en Kotlin ses applications, et reprend le reste tel quel.",
         ))
         .child(
             div()
