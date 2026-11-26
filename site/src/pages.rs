@@ -2,8 +2,10 @@
 
 use paquets::prelude::*;
 
+use crate::art;
 use crate::content::{
-    FACTS, Fact, IN_RUST, NOT_IN_RUST, Part, REFERENCES, RISKS, ROADMAP, Status, Step, VERIFIED_ON,
+    FACTS, Fact, IN_RUST, NOT_IN_RUST, Part, REFERENCES, RISKS, ROADMAP, Status, Step, TICKER,
+    VERIFIED_ON,
 };
 
 const REPOSITORY: &str = "https://github.com/maxlestage/customFirmware";
@@ -40,10 +42,12 @@ pub async fn home(_req: Request) -> Page {
         .description(
             "Un portage d'Android (AOSP) pour le Nothing Phone (4b), dont tout le code propre à l'appareil est écrit en Rust.",
         ))
+        .body(div().class("scroll-progress").attr("aria-hidden", "true"))
         .body(site_header())
         .body(
             main()
                 .child(intro())
+                .child(ticker())
                 .child(device())
                 .child(scope())
                 .child(roadmap())
@@ -62,11 +66,21 @@ pub async fn not_found(_req: Request) -> Page {
         .body(
             main().child(
                 section()
-                    .class("intro")
-                    .child(p().class("eyebrow").text("Erreur 404"))
-                    .child(h1().text("Cette page n'existe pas."))
+                    .class("intro lost")
+                    .child(
+                        p().class("big-404")
+                            .attr("aria-label", "Erreur 404")
+                            .children(
+                                ["4", "0", "4"]
+                                    .into_iter()
+                                    .enumerate()
+                                    .map(|(i, digit)| span().style(format!("--i:{i}")).text(digit)),
+                            ),
+                    )
+                    .child(h1().style("--i:3").text("Cette page n'existe pas."))
                     .child(
                         a().class("button")
+                            .style("--i:4")
                             .href(link("/"))
                             .text("Retour à l'accueil"),
                     ),
@@ -77,7 +91,12 @@ pub async fn not_found(_req: Request) -> Page {
 
 fn site_header() -> Element {
     header()
-        .child(a().class("brand").href(link("/")).text("customFirmware"))
+        .child(
+            a().class("brand")
+                .href(link("/"))
+                .child(text("customFirmware"))
+                .child(span().class("caret").attr("aria-hidden", "true").text("_")),
+        )
         .child(
             nav()
                 .attr("aria-label", "Sections")
@@ -91,37 +110,74 @@ fn site_header() -> Element {
         )
 }
 
+/// Un titre de section, avec son trait animé.
+fn heading(title: &'static str) -> Element {
+    h2().class("reveal").text(title)
+}
+
 fn intro() -> Element {
     let done = ROADMAP.iter().filter(|s| s.status == Status::Done).count();
     section()
         .class("intro")
-        .child(p().class("eyebrow").text("Projet en préparation"))
-        .child(h1().text("Android libre sur le Nothing Phone (4b), avec le code de l'appareil en Rust."))
-        .child(p().class("lead").text(
-            "customFirmware porte AOSP, la version libre d'Android, sur le Nothing Phone (4b). Tout ce que le projet écrit lui-même est en Rust : couches matérielles, services et outils.",
-        ))
-        .child(
-            p().class("notice")
-                .child(strong().text("Rien n'est encore installable. "))
-                .child(text(format!(
-                    "{done} étapes sur {} sont faites ; la suivante est le déverrouillage du bootloader.",
-                    ROADMAP.len()
-                ))),
-        )
         .child(
             div()
-                .class("row")
-                .child(a().class("button").href("#feuille-de-route").text("Voir la feuille de route"))
-                .child(a().class("button ghost").href(REPOSITORY).text("Code source")),
+                .class("intro-text")
+                .child(p().class("eyebrow").style("--i:0").text("Projet en préparation"))
+                .child(
+                    h1().style("--i:1")
+                        .child(text("Android libre sur le Nothing Phone (4b), avec le code de l'appareil en "))
+                        .child(span().class("shine").text("Rust"))
+                        .child(text(".")),
+                )
+                .child(p().class("lead").style("--i:2").text(
+                    "customFirmware porte AOSP, la version libre d'Android, sur le Nothing Phone (4b). Tout ce que le projet écrit lui-même est en Rust : couches matérielles, services et outils.",
+                ))
+                .child(
+                    div()
+                        .class("notice")
+                        .style("--i:3")
+                        .child(art::progress_ring(done, ROADMAP.len()))
+                        .child(
+                            p().child(strong().text("Rien n'est encore installable. "))
+                                .child(text(format!(
+                                    "{done} étapes sur {} sont faites ; la suivante est le déverrouillage du bootloader.",
+                                    ROADMAP.len()
+                                ))),
+                        ),
+                )
+                .child(
+                    div()
+                        .class("row")
+                        .style("--i:4")
+                        .child(a().class("button").href("#feuille-de-route").text("Voir la feuille de route"))
+                        .child(a().class("button ghost").href(REPOSITORY).text("Code source")),
+                ),
         )
+        .child(div().class("intro-art").child(art::hero()))
+}
+
+/// Les mots qui défilent : la liste est écrite deux fois, pour boucler sans saut.
+fn ticker() -> Element {
+    let words = |hidden: bool| {
+        div()
+            .class("ticker-group")
+            .attr("aria-hidden", if hidden { "true" } else { "false" })
+            .children(TICKER.iter().map(|word| span().text(*word)))
+    };
+    div().class("ticker").child(
+        div()
+            .class("ticker-track")
+            .child(words(false))
+            .child(words(true)),
+    )
 }
 
 fn device() -> Element {
     section()
         .id("appareil")
-        .child(h2().text("L'appareil"))
+        .child(heading("L'appareil"))
         .child(
-            p().class("muted")
+            p().class("muted reveal")
                 .text(format!("Faits vérifiés le {VERIFIED_ON}.")),
         )
         .child(
@@ -132,7 +188,8 @@ fn device() -> Element {
 }
 
 fn fact_row(fact: &Fact) -> Element {
-    tr().child(th().attr("scope", "row").text(fact.label))
+    tr().class("reveal")
+        .child(th().attr("scope", "row").text(fact.label))
         .child(
             td().child(span().text(fact.value))
                 .child(fact.note.map(|note| small().text(note))),
@@ -142,8 +199,8 @@ fn fact_row(fact: &Fact) -> Element {
 fn scope() -> Element {
     section()
         .id("rust")
-        .child(h2().text("Ce qui est en Rust, et ce qui ne peut pas l'être"))
-        .child(p().class("muted").text(
+        .child(heading("Ce qui est en Rust, et ce qui ne peut pas l'être"))
+        .child(p().class("muted reveal").text(
             "Un téléphone ne peut pas être réécrit entièrement en Rust. Le projet écrit en Rust tout ce qu'il ajoute et reprend le reste tel quel.",
         ))
         .child(
@@ -156,11 +213,12 @@ fn scope() -> Element {
 
 fn part_list(title: &'static str, kind: &'static str, parts: &'static [Part]) -> Element {
     div()
-        .class("card parts")
+        .class("card parts reveal")
         .class(kind)
         .child(h3().text(title))
-        .child(ul().children(parts.iter().map(|part| {
-            li().child(strong().text(part.title))
+        .child(ul().children(parts.iter().enumerate().map(|(i, part)| {
+            li().style(format!("--i:{i}"))
+                .child(strong().text(part.title))
                 .child(span().text(part.detail))
         })))
 }
@@ -168,40 +226,59 @@ fn part_list(title: &'static str, kind: &'static str, parts: &'static [Part]) ->
 fn roadmap() -> Element {
     section()
         .id("feuille-de-route")
-        .child(h2().text("Feuille de route"))
-        .child(ol().class("steps").children(ROADMAP.iter().map(step_item)))
+        .child(heading("Feuille de route"))
+        .child(
+            ol().class("steps")
+                .children(ROADMAP.iter().enumerate().map(step_item)),
+        )
 }
 
-fn step_item(step: &Step) -> Element {
-    li().class(if step.status == Status::Next {
-        "current"
+fn step_item((i, step): (usize, &Step)) -> Element {
+    let marker = span().class("marker").attr("aria-hidden", "true");
+    let marker = if step.status == Status::Done {
+        marker.child(art::check())
     } else {
-        ""
-    })
-    .child(
-        div()
-            .class("step-text")
-            .child(strong().text(step.title))
-            .child(span().text(step.detail)),
-    )
-    .child(span().class(step.status.class()).text(step.status.label()))
+        marker.text(format!("{:02}", i + 1))
+    };
+    li().class("reveal")
+        .class(match step.status {
+            Status::Done => "done",
+            Status::Next => "current",
+            Status::Todo => "todo",
+        })
+        .child(marker)
+        .child(
+            div()
+                .class("step-text")
+                .child(strong().text(step.title))
+                .child(span().text(step.detail)),
+        )
+        .child(span().class(step.status.class()).text(step.status.label()))
 }
 
 fn risks() -> Element {
-    section().id("risques").child(h2().text("Risques")).child(
-        ul().class("risks")
-            .children(RISKS.iter().map(|risk| li().text(*risk))),
-    )
+    section()
+        .id("risques")
+        .child(heading("Risques"))
+        .child(
+            ul().class("risks")
+                .children(RISKS.iter().enumerate().map(|(i, risk)| {
+                    li().class("reveal")
+                        .style(format!("--i:{i}"))
+                        .child(art::warning())
+                        .child(span().text(*risk))
+                })),
+        )
 }
 
 fn references() -> Element {
-    section().id("sources").child(h2().text("Sources")).child(
-        ul().class("sources").children(
-            REFERENCES
-                .iter()
-                .map(|r| li().child(a().href(r.url).attr("rel", "noopener").text(r.title))),
-        ),
-    )
+    section()
+        .id("sources")
+        .child(heading("Sources"))
+        .child(ul().class("sources").children(REFERENCES.iter().map(|r| {
+            li().class("reveal")
+                .child(a().href(r.url).attr("rel", "noopener").text(r.title))
+        })))
 }
 
 fn site_footer() -> Element {
