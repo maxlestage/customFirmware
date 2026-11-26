@@ -33,7 +33,7 @@ SITE_BASE=/customFirmware cargo run -- export ../dist
 
 - **Heroku** : buildpack emk/rust sur la pile heroku-26 (`RustConfig`, `Procfile` et `app.json`
   à la racine du dépôt). `cargo build --release` à la racine compile le site.
-- **GitHub Pages** : `.github/workflows/pages.yml` pousse l'export sur la branche `gh-pages`.
+- **GitHub Pages** : `.github/workflows/pages.yml` publie l'export par `actions/deploy-pages` (source « GitHub Actions »).
 
 Les deux sont lancés après chaque fusion dans `master` (voir le README du dépôt).
 

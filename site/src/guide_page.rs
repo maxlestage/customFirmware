@@ -18,6 +18,7 @@ pub async fn guide(_req: Request) -> Page {
             main().class("guide").child(guide_intro()).child(
                 div()
                     .class("guide-layout")
+                    .child(toc_mobile())
                     .child(toc())
                     .child(div().class("guide-steps").children(STEPS.iter().enumerate().map(step))),
             ),
@@ -48,18 +49,33 @@ fn guide_intro() -> Element {
         )
 }
 
-fn toc() -> Element {
-    nav()
-        .class("toc")
-        .attr("aria-label", "Étapes du guide")
-        .child(p().class("toc-title").text("Étapes"))
-        .child(ol().children(STEPS.iter().enumerate().map(|(i, s)| {
+/// La liste des étapes, avec leur numéro.
+fn toc_list() -> Element {
+    ol().class("toc-list")
+        .children(STEPS.iter().enumerate().map(|(i, s)| {
             li().child(
                 a().href(format!("#{}", s.id))
                     .child(span().class("toc-num").text(format!("{:02}", i)))
                     .child(text(s.title)),
             )
-        })))
+        }))
+}
+
+/// Le sommaire sur téléphone : un menu qui se déplie, sans JavaScript.
+fn toc_mobile() -> Element {
+    details()
+        .class("toc-mobile")
+        .child(summary().text(format!("Les {} étapes", STEPS.len())))
+        .child(toc_list())
+}
+
+/// Le sommaire sur grand écran : une colonne qui reste visible.
+fn toc() -> Element {
+    nav()
+        .class("toc")
+        .attr("aria-label", "Étapes du guide")
+        .child(p().class("toc-title").text("Étapes"))
+        .child(toc_list())
 }
 
 fn step((i, s): (usize, &Step)) -> Element {

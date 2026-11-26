@@ -1,7 +1,6 @@
-# Publie le site sur GitHub Pages : l'export statique de master, poussé sur la
-# branche gh-pages. Adresse : https://maxlestage.github.io/customFirmware/
-# Une seule fois, dans GitHub : Settings → Pages → Source « Deploy from a branch »,
-# branche gh-pages, dossier / (si Pages ne s'est pas activé seul).
+# Publie le site sur GitHub Pages (source « GitHub Actions » dans Settings → Pages) :
+# l'export statique de master, envoyé à Pages par actions/deploy-pages.
+# Adresse : https://maxlestage.github.io/customFirmware/
 
 name: GitHub Pages
 
@@ -10,35 +9,40 @@ on:
     branches: [master]
   workflow_dispatch:
 
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
 concurrency:
   group: pages
   cancel-in-progress: false
 
 jobs:
-  publish:
-    name: Publier
+  build:
+    name: Export statique
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
     steps:
       - uses: actions/checkout@v4
         with:
           ref: master
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
-      - name: Export statique
+      - name: Exporter le site
         working-directory: site
         run: SITE_BASE=/customFirmware cargo run --release -- export ../dist
-      - name: Pousser sur gh-pages
-        working-directory: dist
-        env:
-          SHA: ${{ github.sha }}
-        run: |
-          set -euo pipefail
-          git init -q -b gh-pages
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -A
-          git commit -q -m "Site de master ($SHA)"
-          git push -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" gh-pages
-          echo "### 🌐 https://maxlestage.github.io/customFirmware/" >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+  deploy:
+    name: Publier
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
