@@ -1,0 +1,9 @@
+[package]
+name = "cf"
+version = "0.1.0"
+edition = "2024"
+publish = false
+description = "Les outils de customFirmware : relever les faits du téléphone, extraire les fichiers propriétaires, vérifier l'ordinateur."
+
+# Aucune dépendance : la bibliothèque standard suffit, et l'outil se compile en quelques secondes.
+[dependencies]

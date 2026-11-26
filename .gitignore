@@ -5,3 +5,7 @@
 *.db
 # The settings of this computer (NUAGE_TOKEN...): never committed nor deployed
 .env
+
+# Générés par `cf` : propres à un téléphone ou propriétaires, jamais suivis par git
+facts.mk
+blobs.mk

@@ -85,7 +85,7 @@ pub const IN_RUST: &[Part] = &[
     },
     Part {
         title: "Outils sur l'ordinateur",
-        detail: "Extraction des binaires du fabricant, génération de la configuration, installation.",
+        detail: "cf, déjà écrit et testé : vérification de l'ordinateur, faits du téléphone, extraction des fichiers du fabricant.",
     },
     Part {
         title: "Ce site",
@@ -152,13 +152,18 @@ pub const ROADMAP: &[Step] = &[
         status: Status::Done,
     },
     Step {
-        title: "Présenter le projet",
-        detail: "Ce site, écrit en Rust avec Paquets.",
+        title: "Présenter le projet et écrire le guide",
+        detail: "Ce site, écrit en Rust avec Paquets, et son guide pas à pas.",
         status: Status::Done,
     },
     Step {
-        title: "Écrire le guide",
-        detail: "Toutes les étapes, de la sauvegarde à l'installation, avec leurs commandes et leurs sources.",
+        title: "Écrire les outils en Rust",
+        detail: "cf vérifie l'ordinateur, lit les faits du téléphone et extrait les fichiers propriétaires. Testé.",
+        status: Status::Done,
+    },
+    Step {
+        title: "Écrire le premier service en Rust",
+        detail: "Un service Binder et le produit AOSP qui l'embarque. Le code est écrit, pas encore compilé dans AOSP.",
         status: Status::Done,
     },
     Step {
@@ -167,33 +172,28 @@ pub const ROADMAP: &[Step] = &[
         status: Status::Next,
     },
     Step {
-        title: "Sauvegarder le système d'origine",
-        detail: "Une copie complète du firmware de Nothing, pour pouvoir revenir en arrière.",
+        title: "Démarrer une image AOSP générique",
+        detail: "L'image officielle de Google, sur le noyau et les pilotes d'origine : on voit ce qui fonctionne, sans rien compiler.",
         status: Status::Todo,
     },
     Step {
-        title: "Extraire les binaires du fabricant",
-        detail: "Un outil Rust dresse la liste des fichiers propriétaires et les copie depuis le système d'origine.",
+        title: "Compiler et installer notre système",
+        detail: "L'image générique d'AOSP plus le service Rust du projet. Il faut un ordinateur de 64 Go de mémoire.",
         status: Status::Todo,
     },
     Step {
-        title: "Écrire la configuration de l'appareil",
-        detail: "Le « device tree » SuperContra : partitions, démarrage, règles de sécurité.",
+        title: "Donner au service sa politique de sécurité",
+        detail: "Les règles SELinux qui permettent au système de le lancer tout seul au démarrage.",
         status: Status::Todo,
     },
     Step {
-        title: "Compiler le noyau",
-        detail: "Depuis les sources de Nothing, sans modification pour commencer.",
+        title: "Construire la partition des pilotes",
+        detail: "Fichiers propriétaires, noyau et configuration SuperContra : un système complet pour le téléphone.",
         status: Status::Todo,
     },
     Step {
-        title: "Écrire la première couche matérielle en Rust",
+        title: "Écrire une couche matérielle en Rust",
         detail: "Le vibreur ou les lumières : un service court, facile à vérifier sur le téléphone.",
-        status: Status::Todo,
-    },
-    Step {
-        title: "Démarrer AOSP sur le téléphone",
-        detail: "Écran, tactile, Wi-Fi, appels : chaque fonction est vérifiée une par une.",
         status: Status::Todo,
     },
 ];

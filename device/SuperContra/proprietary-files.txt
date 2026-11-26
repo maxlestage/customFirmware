@@ -1,0 +1,7 @@
+# Les fichiers propriétaires à reprendre du système d'origine, un par ligne.
+# Lus par `cf blobs`. Le premier dossier est la partition : vendor, odm, product…
+#
+#   vendor/lib64/libexemple.so
+#   vendor/etc/origine.xml:vendor/etc/destination.xml
+#
+# La liste est vide : elle se remplit en lisant les partitions d'origine (guide, étape 09).

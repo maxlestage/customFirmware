@@ -22,6 +22,8 @@ jobs:
           components: clippy, rustfmt
       - uses: Swatinem/rust-cache@v2
       - run: cargo fmt --check
+      # Le service Rust est compilé par AOSP, pas par Cargo : on vérifie au moins sa syntaxe.
+      - run: rustfmt --check --edition 2021 services/hello/src/main.rs
       - run: cargo clippy --all-targets -- -D warnings
       - run: cargo test
       - name: Export statique

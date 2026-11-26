@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Manifeste local pour `repo` : place ce dépôt dans vendor/customfirmware de l'arbre AOSP.
+     À copier dans .repo/local_manifests/ (voir le guide, étape 06). -->
+<manifest>
+  <remote name="customfirmware" fetch="https://github.com/maxlestage" />
+  <project name="customFirmware" path="vendor/customfirmware" remote="customfirmware" revision="master" />
+</manifest>
