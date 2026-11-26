@@ -19,7 +19,18 @@ cargo test
 Pour mettre le site à jour (une étape terminée, un fait vérifié), modifiez `src/content.rs` :
 le statut d'une étape est `Status::Done`, `Status::Next` ou `Status::Todo`.
 
+Pour GitHub Pages, le site est exporté en fichiers statiques, avec les liens préfixés par
+`SITE_BASE` :
+
+```sh
+cd site
+SITE_BASE=/customFirmware cargo run -- export ../dist
+```
+
 ## Déploiement
 
-`heroku.yml` et `app.json`, à la racine du dépôt, font construire `site/Dockerfile` par Heroku.
-Cette configuration n'a pas encore été essayée : le site n'est déployé nulle part.
+- **Heroku** : buildpack emk/rust sur la pile heroku-26 (`RustConfig`, `Procfile` et `app.json`
+  à la racine du dépôt). `cargo build --release` à la racine compile le site.
+- **GitHub Pages** : `.github/workflows/pages.yml` pousse l'export sur la branche `gh-pages`.
+
+Les deux sont lancés après chaque fusion dans `master` (voir le README du dépôt).

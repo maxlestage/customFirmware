@@ -1,0 +1,3 @@
+# Heroku, buildpack emk/rust (pile heroku-26) : il installe Rust, puis lance
+# `cargo build --release` à la racine, qui compile le site (voir Cargo.toml).
+VERSION=stable

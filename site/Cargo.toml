@@ -6,11 +6,5 @@ publish = false
 
 [dependencies]
 paquets = { git = "https://github.com/maxlestage/Paquets" }
-
-[dev-dependencies]
+# Pour `export` ; déjà utilisé par Paquets.
 tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
-
-[profile.release]
-lto = "thin"
-codegen-units = 1
-strip = true

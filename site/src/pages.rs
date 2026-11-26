@@ -9,15 +9,37 @@ use crate::content::{
 const REPOSITORY: &str = "https://github.com/maxlestage/customFirmware";
 const PAQUETS: &str = "https://github.com/maxlestage/Paquets";
 
+/// Le préfixe des liens internes : vide sur Heroku, `/customFirmware` sur GitHub Pages,
+/// où le site est servi dans un sous-dossier. Lu une fois dans `SITE_BASE`.
+fn base() -> &'static str {
+    static BASE: std::sync::OnceLock<String> = std::sync::OnceLock::new();
+    BASE.get_or_init(|| {
+        let base = std::env::var("SITE_BASE").unwrap_or_default();
+        base.trim_end_matches('/').to_owned()
+    })
+}
+
+/// Un lien interne : `link("/site.css")` donne `/customFirmware/site.css` sur GitHub Pages.
+fn link(path: &str) -> String {
+    format!("{}{path}", base())
+}
+
+/// L'icône et la feuille de style, communes aux deux pages.
+fn assets(page: Page) -> Page {
+    page.head(format!(
+        r#"<link rel="icon" href="{}"/>"#,
+        link("/favicon.svg")
+    ))
+    .stylesheet(link("/site.css"))
+}
+
 /// La page d'accueil : tout le site tient sur une page.
 pub async fn home(_req: Request) -> Page {
-    Page::new("customFirmware : AOSP et Rust sur le Nothing Phone (4b)")
+    assets(Page::new("customFirmware : AOSP et Rust sur le Nothing Phone (4b)")
         .lang("fr")
         .description(
             "Un portage d'Android (AOSP) pour le Nothing Phone (4b), dont tout le code propre à l'appareil est écrit en Rust.",
-        )
-        .head(r#"<link rel="icon" href="/favicon.svg"/>"#)
-        .stylesheet("/site.css")
+        ))
         .body(site_header())
         .body(
             main()
@@ -33,11 +55,9 @@ pub async fn home(_req: Request) -> Page {
 
 /// La page des adresses inconnues.
 pub async fn not_found(_req: Request) -> Page {
-    Page::new("Page introuvable")
+    assets(Page::new("Page introuvable"))
         .lang("fr")
         .status(404)
-        .head(r#"<link rel="icon" href="/favicon.svg"/>"#)
-        .stylesheet("/site.css")
         .body(site_header())
         .body(
             main().child(
@@ -45,7 +65,11 @@ pub async fn not_found(_req: Request) -> Page {
                     .class("intro")
                     .child(p().class("eyebrow").text("Erreur 404"))
                     .child(h1().text("Cette page n'existe pas."))
-                    .child(a().class("button").href("/").text("Retour à l'accueil")),
+                    .child(
+                        a().class("button")
+                            .href(link("/"))
+                            .text("Retour à l'accueil"),
+                    ),
             ),
         )
         .body(site_footer())
@@ -53,14 +77,17 @@ pub async fn not_found(_req: Request) -> Page {
 
 fn site_header() -> Element {
     header()
-        .child(a().class("brand").href("/").text("customFirmware"))
+        .child(a().class("brand").href(link("/")).text("customFirmware"))
         .child(
             nav()
                 .attr("aria-label", "Sections")
-                .child(a().href("/#appareil").text("Appareil"))
-                .child(a().href("/#rust").text("Rust"))
-                .child(a().href("/#feuille-de-route").text("Feuille de route"))
-                .child(a().href("/#sources").text("Sources")),
+                .child(a().href(link("/#appareil")).text("Appareil"))
+                .child(a().href(link("/#rust")).text("Rust"))
+                .child(
+                    a().href(link("/#feuille-de-route"))
+                        .text("Feuille de route"),
+                )
+                .child(a().href(link("/#sources")).text("Sources")),
         )
 }
 
