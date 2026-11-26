@@ -1,0 +1,17 @@
+# energie : les réglages d'énergie du noyau (voir README.md).
+# Installé dans /system_ext/etc/init ; init le lit au démarrage.
+
+on post-fs-data
+    # Les réglages modifiables, le journal et les valeurs d'origine.
+    mkdir /data/misc/energie 0770 root system
+    mkdir /data/misc/energie/profils 0770 root system
+
+service customfirmware-energie /system_ext/bin/customfirmware-energie --dossier /data/misc/energie --modeles /system_ext/etc/energie demon
+    class late_start
+    # root pour écrire les réglages du noyau (fichiers de root, ou du groupe system) ;
+    # aucune capacité : rien de plus que ces droits-là.
+    user root
+    group root system
+    capabilities
+    # Ses messages vont dans le journal du noyau : `adb shell dmesg | grep energie`.
+    stdio_to_kmsg

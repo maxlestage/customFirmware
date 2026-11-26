@@ -1,0 +1,39 @@
+# energie : les réglages d'énergie du noyau (services/energie).
+# Politique « system_ext privée » : rien ici n'est visible de la partition vendor.
+
+type energie, domain, coredomain;
+type energie_exec, system_file_type, exec_type, file_type;
+type energie_data_file, file_type, data_file_type, core_data_file_type;
+
+# init le lance depuis /system_ext/bin dans son propre domaine.
+init_daemon_domain(energie)
+
+# Ses réglages, son journal et les valeurs d'origine : /data/misc/energie.
+allow energie energie_data_file:dir create_dir_perms;
+allow energie energie_data_file:file create_file_perms;
+
+# Les modèles livrés : /system_ext/etc/energie.
+allow energie system_file:dir r_dir_perms;
+allow energie system_file:file r_file_perms;
+
+# Les réglages du noyau qu'il écrit :
+# fréquences et gouverneur des processeurs (/sys/devices/system/cpu) ;
+allow energie sysfs_devices_system_cpu:dir r_dir_perms;
+allow energie sysfs_devices_system_cpu:file rw_file_perms;
+# /proc/sys/walt et /proc/sys/vm/dirty_writeback_centisecs, sans étiquette particulière.
+allow energie proc:dir r_dir_perms;
+allow energie proc:file rw_file_perms;
+allow energie proc_dirty:file rw_file_perms;
+
+# Ce qu'il lit : la batterie et le rétroéclairage de l'écran.
+allow energie sysfs:dir r_dir_perms;
+allow energie sysfs:lnk_file r_file_perms;
+allow energie sysfs:file r_file_perms;
+allow energie sysfs_batteryinfo:dir r_dir_perms;
+allow energie sysfs_batteryinfo:file r_file_perms;
+
+# La partition vendor de Nothing peut donner ses propres étiquettes à certains de ces
+# fichiers (GPU, batterie, écran), et une politique système ne peut pas les nommer.
+# Sur un système userdebug, energie est donc permissif : ce qui manque est seulement
+# noté (`adb shell dmesg | grep avc | grep energie`), pour compléter les règles ci-dessus.
+userdebug_or_eng(`permissive energie;')

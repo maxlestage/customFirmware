@@ -8,6 +8,7 @@ mod capteurs;
 mod config;
 mod demon;
 mod journal;
+mod modeles;
 mod profil;
 mod systeme;
 
@@ -29,11 +30,15 @@ Usage : energie [--dossier <dossier>] <commande>
   verifier <profil>    ce que le profil changerait, sans rien écrire
   appliquer <profil>   applique un profil (il faut être root)
   restaurer            remet tous les réglages d'origine (= appliquer origine)
+  forcer <profil>      impose un profil au démon, quoi que disent les règles
+  forcer auto          rend la main aux règles
   demon                choisit et applique les profils tout seul, tient le journal
   rapport [journal]    ce que chaque profil consomme, d'après le journal
 
 Le dossier contient energie.conf, profils/ et ce qu'energie écrit (origine.etat,
-journal.csv) ; par défaut $ENERGIE_DOSSIER, sinon /data/local/tmp/energie.";
+journal.csv) ; par défaut $ENERGIE_DOSSIER, sinon /data/misc/energie. Les fichiers
+qui y manquent sont copiés depuis les modèles du système (--modeles, par défaut
+/system_ext/etc/energie). Le démon relit tout dès qu'un fichier change.";
 
 /// Écrit sur la sortie standard ; s'arrête sans bruit si le tube est fermé (`| head`).
 fn out(texte: impl AsRef<str>) {
@@ -60,19 +65,22 @@ fn main() -> ExitCode {
     };
     let dossier = option("--dossier")
         .or_else(|| std::env::var("ENERGIE_DOSSIER").ok())
-        .unwrap_or_else(|| "/data/local/tmp/energie".into());
+        .unwrap_or_else(|| "/data/misc/energie".into());
+    let modeles = option("--modeles").unwrap_or_else(|| "/system_ext/etc/energie".into());
     // Pour essayer sur un faux arbre /sys (tests, ordinateur).
     let sys = option("--racine").map_or_else(Systeme::reel, Systeme::avec_racine);
     let dossier = PathBuf::from(dossier);
-    let resultat = demon::Regles::charger(&dossier).and_then(|regles| {
-        let ctx = Contexte {
-            sys,
-            dossier,
-            batterie: regles.batterie,
-            ecran: regles.ecran,
-        };
-        executer(&ctx, &args)
-    });
+    let resultat = modeles::installer(PathBuf::from(modeles).as_path(), &dossier)
+        .and_then(|_| demon::Regles::charger(&dossier))
+        .and_then(|regles| {
+            let ctx = Contexte {
+                sys,
+                dossier,
+                batterie: regles.batterie,
+                ecran: regles.ecran,
+            };
+            executer(&ctx, &args)
+        });
     match resultat {
         Ok(true) => ExitCode::SUCCESS,
         Ok(false) => ExitCode::FAILURE,
@@ -96,6 +104,7 @@ fn executer(ctx: &Contexte, args: &[String]) -> Result<bool, String> {
         Some("verifier") => verifier(ctx, argument("le nom du profil")?),
         Some("appliquer") => appliquer(ctx, argument("le nom du profil")?),
         Some("restaurer") => appliquer(ctx, profil::ORIGINE),
+        Some("forcer") => forcer(ctx, argument("un nom de profil, ou auto")?),
         Some("demon") => demon::lancer(&ctx.sys, &ctx.dossier).map(|()| true),
         Some("rapport") => {
             let fichier = args
@@ -139,8 +148,11 @@ fn etat(ctx: &Contexte) -> Result<bool, String> {
     out(ligne);
     out(format!("Écran : {}", Ecran::lire(sys, &ctx.ecran).nom()));
     out(format!(
-        "Profil actif : {}",
-        profil::actif(&ctx.dossier).unwrap_or_else(|| "aucun (réglages d'origine)".into())
+        "Profil actif : {}{}",
+        profil::actif(&ctx.dossier).unwrap_or_else(|| "aucun (réglages d'origine)".into()),
+        demon::force(&ctx.dossier)
+            .map(|f| format!(" (forcé : {f})"))
+            .unwrap_or_default()
     ));
     out("Processeurs :");
     for policy in sys.developper("/sys/devices/system/cpu/cpufreq/policy*") {
@@ -254,4 +266,24 @@ fn appliquer(ctx: &Contexte, nom: &str) -> Result<bool, String> {
         bilan.erreurs.len()
     ));
     Ok(bilan.erreurs.is_empty())
+}
+
+fn forcer(ctx: &Contexte, nom: &str) -> Result<bool, String> {
+    let fichier = ctx.dossier.join("force");
+    if nom == "auto" {
+        match std::fs::remove_file(&fichier) {
+            Ok(()) => out("Le démon suit de nouveau les règles."),
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
+                out("Aucun profil n'était forcé.")
+            }
+            Err(e) => return Err(format!("{} : {e}", fichier.display())),
+        }
+        return Ok(true);
+    }
+    Profil::charger(&ctx.dossier, nom)?;
+    std::fs::write(&fichier, nom).map_err(|e| format!("{} : {e}", fichier.display()))?;
+    out(format!(
+        "Le démon applique {nom} (dans les 2 s s'il tourne) ; `energie forcer auto` pour revenir aux règles."
+    ));
+    Ok(true)
 }

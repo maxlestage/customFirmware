@@ -1,6 +1,6 @@
 # energie : les réglages d'énergie du noyau
 
-**État : écrit et testé sur un faux arbre `/sys` ; pas encore essayé sur le téléphone.**
+**État : écrit et testé sur un faux arbre `/sys` ; démarrage par init et SELinux écrits ; pas encore compilé dans AOSP ni essayé sur le téléphone.**
 
 Le noyau du Phone (4b) (`android_kernel_msm-6.1_nothing_sm6650`) reste celui de Nothing :
 environ 40 millions de lignes de C, dont les pilotes de Qualcomm. energie, écrit en Rust,
@@ -14,42 +14,47 @@ change ses **réglages** (`/sys`, `/proc/sys`) pour que la batterie dure plus lo
 Avant de changer un réglage, energie note sa valeur d'origine (`origine.etat`) :
 `energie restaurer` remet toujours le noyau comme il était.
 
-## Compiler
+## Dans le système
+
+Avec le produit `customfirmware_arm64`, energie fait partie du système :
+
+| Fichier | Rôle |
+|---|---|
+| `/system_ext/bin/customfirmware-energie` | le programme |
+| `/system_ext/etc/init/energie.rc` | [energie.rc](energie.rc) : init le lance au démarrage, en root sans aucune capacité |
+| `/system_ext/etc/energie/` | les réglages livrés ([reglages/](reglages)), en lecture seule |
+| `/data/misc/energie/` | les réglages **à modifier**, le journal, les valeurs d'origine |
+| [sepolicy/](sepolicy) | son domaine SELinux, `energie` |
+
+Au premier lancement, les réglages livrés sont copiés dans `/data/misc/energie`. Ensuite, ce
+sont ceux-là qui comptent : un fichier modifié n'est jamais écrasé, et le démon relit tout
+dans les 2 s qui suivent une modification. Un fichier faux est refusé (le message est dans
+`dmesg`) et les réglages précédents restent.
+
+```sh
+adb root
+adb shell customfirmware-energie etat
+adb pull /data/misc/energie/profils/economie.conf      # modifier, puis :
+adb push economie.conf /data/misc/energie/profils/      # pris en compte tout de suite
+adb shell customfirmware-energie forcer performance     # pour un jeu
+adb shell customfirmware-energie forcer auto            # retour aux règles
+adb shell customfirmware-energie rapport
+adb shell dmesg | grep energie                          # ce que fait le démon
+```
+
+## L'essayer avant d'avoir le système
+
+Sur n'importe quel Android rooté, avec un binaire statique compilé par Cargo :
 
 ```sh
 rustup target add aarch64-unknown-linux-musl
 cargo build --release -p energie --target aarch64-unknown-linux-musl
-# → target/aarch64-unknown-linux-musl/release/energie (statique, ~500 Ko)
-```
-
-Dans AOSP, `m customfirmware-energie` (voir [Android.bp](Android.bp)).
-
-## L'essayer sur le téléphone
-
-Il faut être root (système `userdebug` et `adb root`, ou téléphone rooté) : le noyau
-n'accepte pas les réglages d'un utilisateur ordinaire.
-
-```sh
 adb push target/aarch64-unknown-linux-musl/release/energie /data/local/tmp/
-adb push services/energie/reglages /data/local/tmp/energie
-adb root
-adb shell /data/local/tmp/energie etat
-adb shell /data/local/tmp/energie verifier economie   # ce qui changerait, sans rien écrire
-adb shell /data/local/tmp/energie appliquer economie
-adb shell /data/local/tmp/energie restaurer
+adb push services/energie/reglages /data/local/tmp/energie-modeles
+adb shell su -c '/data/local/tmp/energie --modeles /data/local/tmp/energie-modeles verifier economie'
 ```
 
-Pour qu'il choisisse les profils tout seul :
-
-```sh
-adb shell 'nohup /data/local/tmp/energie demon > /data/local/tmp/energie/demon.log 2>&1 &'
-# quelques jours plus tard :
-adb shell /data/local/tmp/energie rapport
-```
-
-Le démon regarde l'écran et la batterie toutes les 2 s, mais seulement quand le téléphone
-est éveillé : il ne l'empêche jamais de dormir. Il ne survit pas encore à un redémarrage
-(voir « Ce qui manque »).
+Sans `--dossier`, il travaille dans `/data/misc/energie`, comme dans le système.
 
 ## Les commandes
 
@@ -61,6 +66,7 @@ est éveillé : il ne l'empêche jamais de dormir. Il ne survit pas encore à un
 | `verifier <profil>` | ce que le profil changerait, sans rien écrire |
 | `appliquer <profil>` | applique le profil |
 | `restaurer` | remet tous les réglages d'origine |
+| `forcer <profil>` / `forcer auto` | impose un profil au démon / lui rend la main |
 | `demon` | applique les règles de `energie.conf` et tient `journal.csv` |
 | `rapport` | par profil et par état de l'écran : puissance moyenne, % perdus par heure, autonomie |
 
@@ -91,8 +97,8 @@ Un fichier `profils/<nom>.conf` ; la première ligne de commentaire est sa descr
 - `70% cpuinfo_max_freq` : 70 % du fichier voisin, arrondi à une fréquence disponible ;
 - seuls `/sys/…` et `/proc/sys/…` sont acceptés.
 
-Puis `energie verifier lecture`, `energie appliquer lecture`, ou une règle dans
-`energie.conf`.
+Le déposer dans `/data/misc/energie/profils/`, puis `energie verifier lecture`,
+`energie forcer lecture`, ou une règle dans `energie.conf`.
 
 ## Optimiser régulièrement
 
@@ -103,9 +109,24 @@ Puis `energie verifier lecture`, `energie appliquer lecture`, ou une règle dans
 Le rapport ne conclut qu'après 1 h et 2 % perdus dans le même état : en dessous, la jauge
 de la batterie est trop grossière.
 
-## Ce qui manque
+## SELinux
 
-- une politique SELinux et un `.rc` pour qu'`init` le lance au démarrage, comme pour
-  [`hello`](../hello) ;
-- un essai sur le vrai téléphone : les valeurs des profils sont des points de départ
-  prudents, à ajuster avec le rapport.
+Le domaine `energie` a le droit d'écrire les réglages des processeurs
+(`sysfs_devices_system_cpu`), `/proc/sys/walt` et `/proc/sys/vm` (`proc`, `proc_dirty`), et
+de lire la batterie et l'écran. La partition vendor de Nothing peut donner à certains
+fichiers ses propres étiquettes, qu'une politique système ne peut pas nommer : sur un
+système `userdebug`, le domaine est donc permissif, et ce qui lui manquerait est noté :
+
+```sh
+adb shell dmesg | grep avc | grep energie
+```
+
+Sur un système `user`, ces lignes disent quelles règles ajouter à
+[energie.te](sepolicy/energie.te).
+
+## Ce qui reste à faire
+
+- compiler le système dans AOSP (`m`) : `energie.rc`, la politique SELinux et
+  `Android.bp` sont écrits, mais pas encore passés par la compilation d'AOSP ;
+- l'essayer sur le vrai téléphone, puis régler les profils avec le rapport ;
+- choisir le profil depuis le téléphone, sans ordinateur (une tuile des réglages rapides).

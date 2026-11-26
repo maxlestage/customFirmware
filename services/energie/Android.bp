@@ -7,4 +7,64 @@ rust_binary {
     srcs: ["src/main.rs"],
     edition: "2021",
     system_ext_specific: true,
+    // Installés avec lui : son lancement au démarrage et ses réglages par défaut.
+    required: [
+        "customfirmware-energie.rc",
+        "customfirmware-energie.conf",
+        "customfirmware-energie-economie.conf",
+        "customfirmware-energie-economie_forte.conf",
+        "customfirmware-energie-ecran_eteint.conf",
+        "customfirmware-energie-performance.conf",
+    ],
+}
+
+// /system_ext/etc/init/energie.rc
+prebuilt_etc {
+    name: "customfirmware-energie.rc",
+    src: "energie.rc",
+    filename: "energie.rc",
+    sub_dir: "init",
+    system_ext_specific: true,
+}
+
+// /system_ext/etc/energie : les modèles, copiés dans /data/misc/energie au premier
+// lancement (là, ils se modifient).
+prebuilt_etc {
+    name: "customfirmware-energie.conf",
+    src: "reglages/energie.conf",
+    filename: "energie.conf",
+    sub_dir: "energie",
+    system_ext_specific: true,
+}
+
+prebuilt_etc {
+    name: "customfirmware-energie-economie.conf",
+    src: "reglages/profils/economie.conf",
+    filename: "economie.conf",
+    sub_dir: "energie/profils",
+    system_ext_specific: true,
+}
+
+prebuilt_etc {
+    name: "customfirmware-energie-economie_forte.conf",
+    src: "reglages/profils/economie_forte.conf",
+    filename: "economie_forte.conf",
+    sub_dir: "energie/profils",
+    system_ext_specific: true,
+}
+
+prebuilt_etc {
+    name: "customfirmware-energie-ecran_eteint.conf",
+    src: "reglages/profils/ecran_eteint.conf",
+    filename: "ecran_eteint.conf",
+    sub_dir: "energie/profils",
+    system_ext_specific: true,
+}
+
+prebuilt_etc {
+    name: "customfirmware-energie-performance.conf",
+    src: "reglages/profils/performance.conf",
+    filename: "performance.conf",
+    sub_dir: "energie/profils",
+    system_ext_specific: true,
 }
