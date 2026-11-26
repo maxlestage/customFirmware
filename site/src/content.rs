@@ -50,6 +50,20 @@ pub const FACTS: &[Fact] = &[
     },
 ];
 
+/// Les mots qui défilent sous l'introduction.
+pub const TICKER: &[&str] = &[
+    "Snapdragon 6 Gen 4",
+    "SM6650",
+    "Adreno 810",
+    "Linux 6.1",
+    "Android 16",
+    "AOSP",
+    "Rust",
+    "AIDL",
+    "SuperContra",
+    "Nothing OS 4.1",
+];
+
 /// Un élément des deux listes « en Rust » et « reste tel quel ».
 pub struct Part {
     pub title: &'static str,

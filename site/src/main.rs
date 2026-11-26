@@ -3,6 +3,7 @@
 //!     paquets dev                        # le serveur, http://localhost:3000
 //!     cargo run -- export dist           # le site en fichiers statiques (GitHub Pages)
 
+mod art;
 mod content;
 mod pages;
 

@@ -34,3 +34,18 @@ SITE_BASE=/customFirmware cargo run -- export ../dist
 - **GitHub Pages** : `.github/workflows/pages.yml` pousse l'export sur la branche `gh-pages`.
 
 Les deux sont lancés après chaque fusion dans `master` (voir le README du dépôt).
+
+## Animations
+
+Toutes les animations sont en 2D et en CSS, dans `public/site.css` : aucun JavaScript. Les
+illustrations (le téléphone, les engrenages, l'anneau de progression, les coches) sont des SVG
+dessinés par Rust dans `src/art.rs`.
+
+- au chargement : l'introduction monte ligne par ligne, le téléphone se dessine au trait,
+  ses bandes lumineuses s'allument tour à tour, les engrenages tournent, l'anneau se remplit ;
+- en continu : bandeau qui défile, grille de fond qui dérive, curseur qui clignote ;
+- au défilement : barre de lecture, apparitions des sections, rail de la feuille de route qui
+  se remplit (Chrome, Edge et Safari ; ailleurs, tout est simplement visible) ;
+- au survol : liens, boutons, cartes, lignes du tableau.
+
+Rien ne bouge pour les visiteurs qui ont demandé à réduire les animations.

@@ -6,7 +6,7 @@ est écrit en Rust.
 **État : en préparation.** Rien n'est encore installable ; la prochaine étape est le
 déverrouillage du bootloader.
 
-Site : https://customfirmware-*.herokuapp.com (Heroku) · https://maxlestage.github.io/customFirmware/ (GitHub Pages)
+Site : https://customfirmware-417dcda3fe66.herokuapp.com/ (Heroku) · https://maxlestage.github.io/customFirmware/ (GitHub Pages)
 
 | Dossier | Contenu |
 |---|---|
